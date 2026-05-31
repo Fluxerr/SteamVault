@@ -1,19 +1,25 @@
 using SteamVault.Models;
 using SteamVault.Services;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using Application = System.Windows.Application;
 
 namespace SteamVault.ViewModels;
 
 public class DashboardViewModel : ViewModelBase
 {
     private readonly DownloadService _downloadService;
+    private readonly GameSearchService _searchService;
+    private CancellationTokenSource? _searchCts;
+    private System.Timers.Timer? _searchDebounce;
 
-    public DashboardViewModel(DownloadService downloadService)
+    public DashboardViewModel(DownloadService downloadService, GameSearchService searchService)
     {
         _downloadService = downloadService;
+        _searchService = searchService;
 
         DownloadCommand = new RelayCommand(
             async _ => await DownloadAsync(),
@@ -26,6 +32,9 @@ public class DashboardViewModel : ViewModelBase
         InstallGameCommand = new RelayCommand(
             _ => InstallGame(),
             _ => IsComplete);
+
+        SelectSearchResultCommand = new RelayCommand(
+            param => SelectSearchResult(param as SearchResult));
     }
 
     // --- Properties ---
@@ -37,7 +46,25 @@ public class DashboardViewModel : ViewModelBase
         {
             SetProperty(ref _appIdInput, value);
             CommandManager.InvalidateRequerySuggested();
+            TriggerSearch(value);
         }
+    }
+
+    // Search results
+    public ObservableCollection<SearchResult> SearchResults { get; } = new();
+
+    private bool _showSearchResults;
+    public bool ShowSearchResults
+    {
+        get => _showSearchResults;
+        set => SetProperty(ref _showSearchResults, value);
+    }
+
+    private bool _isSearching;
+    public bool IsSearching
+    {
+        get => _isSearching;
+        set => SetProperty(ref _isSearching, value);
     }
 
     private bool _isDownloading;
@@ -65,7 +92,7 @@ public class DashboardViewModel : ViewModelBase
         set => SetProperty(ref _hasError, value);
     }
 
-    private string _statusMessage = "Enter a Steam App ID and press Download.";
+    private string _statusMessage = "Search for a game by name or App ID, then download.";
     public string StatusMessage
     {
         get => _statusMessage;
@@ -133,6 +160,68 @@ public class DashboardViewModel : ViewModelBase
     public ICommand DownloadCommand { get; }
     public ICommand OpenLuaFolderCommand { get; }
     public ICommand InstallGameCommand { get; }
+    public ICommand SelectSearchResultCommand { get; }
+
+    // --- Search ---
+    private void TriggerSearch(string query)
+    {
+        _searchDebounce?.Stop();
+        _searchDebounce?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 1)
+        {
+            ShowSearchResults = false;
+            SearchResults.Clear();
+            return;
+        }
+
+        // Debounce: wait 400ms after user stops typing
+        _searchDebounce = new System.Timers.Timer(200);
+        _searchDebounce.AutoReset = false;
+        _searchDebounce.Elapsed += async (_, _) =>
+        {
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                await PerformSearchAsync(query);
+            });
+        };
+        _searchDebounce.Start();
+    }
+
+    private async Task PerformSearchAsync(string query)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+
+        IsSearching = true;
+
+        try
+        {
+            var results = await _searchService.SearchAsync(query, _searchCts.Token);
+
+            SearchResults.Clear();
+            foreach (var r in results)
+                SearchResults.Add(r);
+
+            ShowSearchResults = SearchResults.Count > 0;
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    private void SelectSearchResult(SearchResult? result)
+    {
+        if (result == null) return;
+
+        _appIdInput = result.AppId;
+        OnPropertyChanged(nameof(AppIdInput));
+        ShowSearchResults = false;
+        SearchResults.Clear();
+        CommandManager.InvalidateRequerySuggested();
+    }
 
     // --- Main Download Flow ---
     private async Task DownloadAsync()
@@ -148,6 +237,7 @@ public class DashboardViewModel : ViewModelBase
         GameReleaseDate = null;
         ResultSummary = null;
         _lastLuaFilePath = null;
+        ShowSearchResults = false;
         CommandManager.InvalidateRequerySuggested();
 
         var appId = AppIdInput.Trim();
@@ -170,7 +260,8 @@ public class DashboardViewModel : ViewModelBase
                     GameType = result.Game?.Type;
                     GameReleaseDate = result.Game?.ReleaseDate;
                     _lastLuaFilePath = result.LuaFilePath;
-                    ResultSummary = $"{result.DepotCount} depot(s) · {result.KeysAttached} key(s) · Lua saved";
+                    var dlcText = result.DlcCount > 0 ? $" · {result.DlcCount} DLC(s)" : "";
+                    ResultSummary = $"{result.DepotCount} depot(s) · {result.KeysAttached} key(s){dlcText} · Lua saved";
                     StatusMessage = $"✓ {result.GameName} installed successfully!";
                     Progress = 100;
                 }

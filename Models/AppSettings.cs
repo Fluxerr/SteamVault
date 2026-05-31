@@ -10,6 +10,18 @@ public class AppSettings
     public List<DownloadHistoryEntry> DownloadHistory { get; set; } = new();
 
     /// <summary>
+    /// Whether OpenSteamTool has been installed (DLLs copied to Steam directory).
+    /// Once true, the installation wizard is never shown again.
+    /// </summary>
+    public bool IsInstalled { get; set; } = false;
+
+    /// <summary>
+    /// When enabled, SteamVault will start with Windows, run in the system tray,
+    /// and automatically scan + update all game Lua configs on launch.
+    /// </summary>
+    public bool AutoUpdateEnabled { get; set; } = false;
+
+    /// <summary>
     /// Auto-detects Steam directory from common paths if not already set.
     /// Returns true if a valid path was found or already configured.
     /// </summary>

@@ -23,6 +23,33 @@ public class SettingsViewModel : ViewModelBase
     public ICommand SaveCommand { get; }
     public ICommand SyncDatabaseCommand { get; }
 
+    // Auto-update toggle
+    public bool AutoUpdateEnabled
+    {
+        get => _settingsService.Settings.AutoUpdateEnabled;
+        set
+        {
+            if (_settingsService.Settings.AutoUpdateEnabled == value) return;
+            _settingsService.Settings.AutoUpdateEnabled = value;
+            OnPropertyChanged();
+
+            // Register/unregister from Windows startup
+            AutoUpdateService.SetStartupEnabled(value);
+            _settingsService.Save();
+
+            StatusMessage = value
+                ? "Auto-update enabled — SteamVault will start with Windows."
+                : "Auto-update disabled — SteamVault won't start automatically.";
+
+            ClearStatusAfterDelay();
+        }
+    }
+
+    public void RefreshAutoUpdateStatus()
+    {
+        OnPropertyChanged(nameof(AutoUpdateEnabled));
+    }
+
     private string _statusMessage = "";
     public string StatusMessage
     {
@@ -56,8 +83,11 @@ public class SettingsViewModel : ViewModelBase
     {
         _settingsService.Save();
         StatusMessage = "Settings saved successfully.";
+        ClearStatusAfterDelay();
+    }
 
-        // Clear message after 3 seconds
+    private void ClearStatusAfterDelay()
+    {
         Task.Delay(3000).ContinueWith(_ =>
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>

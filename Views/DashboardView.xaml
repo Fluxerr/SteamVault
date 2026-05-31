@@ -12,162 +12,203 @@
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="36,28,36,36">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>  <!-- Title -->
-                <RowDefinition Height="Auto"/>  <!-- Input + Download -->
-                <RowDefinition Height="Auto"/>  <!-- Game Card (after download) -->
-                <RowDefinition Height="Auto"/>  <!-- Status -->
-            </Grid.RowDefinitions>
-
-            <!-- ═══ Title ═══ -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,4">
+        <StackPanel Margin="40,32,40,40">
+            <!-- Header -->
+            <StackPanel Margin="0,0,0,8">
                 <TextBlock Text="SteamVault" Style="{StaticResource TitleText}"/>
-                <TextBlock Text="Enter a Steam App ID and press Download. Everything is automatic." 
-                           Style="{StaticResource SubtitleText}" Margin="0,-12,0,24"/>
+                <TextBlock Text="Search for any Steam game by name or App ID. Everything is automatic." 
+                           Style="{StaticResource SubtitleText}" Margin="0,-12,0,28"/>
             </StackPanel>
 
-            <!-- ═══ Search + Download (single bar) ═══ -->
-            <Border Grid.Row="1" Background="{StaticResource CardBackground}" CornerRadius="12" 
-                    Padding="20,16" Margin="0,0,0,20">
+            <!-- Search Card -->
+            <Border Background="{StaticResource CardBackground}" CornerRadius="14" 
+                    Padding="20,16" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    Style="{StaticResource GlowCard}" Margin="0,0,0,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <TextBox Text="{Binding AppIdInput, UpdateSourceTrigger=PropertyChanged}" 
-                             Height="48" FontSize="16" VerticalContentAlignment="Center"
-                             Tag="Steam App ID (e.g. 730, 1245620, 292030)">
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Return" Command="{Binding DownloadCommand}"/>
-                        </TextBox.InputBindings>
-                    </TextBox>
+                    <Grid>
+                        <TextBox Text="{Binding AppIdInput, UpdateSourceTrigger=PropertyChanged}" 
+                                 Height="50" FontSize="16" VerticalContentAlignment="Center"
+                                 Tag="🔍  Search by game name or App ID...">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding DownloadCommand}"/>
+                                <KeyBinding Key="Escape" Command="{Binding SelectSearchResultCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
 
-                    <Button Grid.Column="1" Content="⬇  Download" Width="160" Height="48" Margin="12,0,0,0" 
-                            Command="{Binding DownloadCommand}"
-                            Style="{StaticResource SuccessButton}" FontSize="15"/>
+                        <TextBlock Text="⏳" FontSize="14" HorizontalAlignment="Right" 
+                                   VerticalAlignment="Center" Margin="0,0,14,0"
+                                   Visibility="{Binding IsSearching, Converter={StaticResource BoolToVis}}"/>
+                    </Grid>
+
+                    <Button Grid.Column="1" Content="⬇  Download" Width="160" Height="50" Margin="14,0,0,0" 
+                            Command="{Binding DownloadCommand}" FontSize="15"/>
                 </Grid>
             </Border>
 
-            <!-- ═══ Game Result Card (shown after successful download) ═══ -->
-            <Border Grid.Row="2" Background="{StaticResource CardBackground}" CornerRadius="12" 
-                    Padding="0" Margin="0,0,0,16"
-                    Visibility="{Binding HasGameInfo, Converter={StaticResource BoolToVis}}">
-                <Grid Margin="24,24,24,24">
+            <!-- Search Results Dropdown -->
+            <Border CornerRadius="12" ClipToBounds="True"
+                    Visibility="{Binding ShowSearchResults, Converter={StaticResource BoolToVis}}"
+                    Margin="0,0,174,12">
+                <Border CornerRadius="12" BorderBrush="#3A2A5E" BorderThickness="1" Background="#1A1A28">
+                    <ItemsControl ItemsSource="{Binding SearchResults}" MaxHeight="320">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="ResultItem" Background="Transparent" 
+                                        Padding="14,10" Cursor="Hand"
+                                        MouseLeftButtonDown="SearchResult_Click"
+                                        ToolTipService.ToolTip="{Binding Name}"
+                                        ToolTipService.Placement="Mouse">
+                                    <Border.Resources>
+                                        <Style TargetType="ToolTip" BasedOn="{StaticResource PremiumToolTip}"/>
+                                    </Border.Resources>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" CornerRadius="6" ClipToBounds="True" 
+                                                Width="44" Height="20" VerticalAlignment="Center">
+                                            <Image Source="{Binding ImageUrl}" Stretch="UniformToFill"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" 
+                                                   VerticalAlignment="Center" FontSize="13"
+                                                   TextTrimming="CharacterEllipsis" Margin="4,0"/>
+                                        <Border Grid.Column="2" Background="#1E1E30" CornerRadius="6" 
+                                                Padding="8,3" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding AppId}" FontSize="11" 
+                                                       Foreground="{StaticResource DimText}"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <Trigger SourceName="ResultItem" Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="ResultItem" Property="Background" Value="#222238"/>
+                                    </Trigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </Border>
+
+            <!-- Game Result Card -->
+            <Border CornerRadius="14" Padding="0" Margin="0,0,0,20"
+                    BorderBrush="#2A1A4E" BorderThickness="1"
+                    Visibility="{Binding HasGameInfo, Converter={StaticResource BoolToVis}}"
+                    Style="{StaticResource GlowCard}">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#141420" Offset="0"/>
+                        <GradientStop Color="#1A1A2E" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid Margin="28,28,28,28">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="260" />
+                        <ColumnDefinition Width="280" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-
-                    <!-- Game Image with rounded corners -->
-                    <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" 
+                    <Border Grid.Column="0" CornerRadius="10" ClipToBounds="True" 
                             VerticalAlignment="Top" HorizontalAlignment="Left">
-                        <Image Source="{Binding GameImage}" 
-                               Stretch="Uniform" Width="260"/>
+                        <Image Source="{Binding GameImage}" Stretch="Uniform" Width="280"
+                               Style="{StaticResource FadeInImage}"/>
                     </Border>
-
-                    <!-- Game Info -->
-                    <StackPanel Grid.Column="1" Margin="24,0,0,0">
-                        <TextBlock Text="{Binding GameName}" FontSize="24" FontWeight="Bold" 
-                                   TextWrapping="Wrap" Margin="0,0,0,6"/>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                            <Border Background="#252538" CornerRadius="4" Padding="8,3" Margin="0,0,8,0">
+                    <StackPanel Grid.Column="1" Margin="28,0,0,0">
+                        <TextBlock Text="{Binding GameName}" FontSize="26" FontWeight="Bold" 
+                                   TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
                                 <TextBlock Text="{Binding AppIdInput, StringFormat='ID: {0}'}" 
                                            FontSize="12" Foreground="{StaticResource MutedText}"/>
                             </Border>
-                            <Border Background="#252538" CornerRadius="4" Padding="8,3" Margin="0,0,8,0">
-                                <TextBlock Text="{Binding GameType}" 
-                                           FontSize="12" Foreground="{StaticResource MutedText}"/>
+                            <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
+                                <TextBlock Text="{Binding GameType}" FontSize="12" Foreground="{StaticResource MutedText}"/>
                             </Border>
-                            <Border Background="#252538" CornerRadius="4" Padding="8,3">
-                                <TextBlock Text="{Binding GameReleaseDate}" 
-                                           FontSize="12" Foreground="{StaticResource MutedText}"/>
+                            <Border Background="#1E1E30" CornerRadius="6" Padding="10,4">
+                                <TextBlock Text="{Binding GameReleaseDate}" FontSize="12" Foreground="{StaticResource MutedText}"/>
                             </Border>
                         </StackPanel>
-
-                        <TextBlock Text="{Binding GameDescription}" 
-                                   TextWrapping="Wrap" FontSize="13" 
-                                   Foreground="{StaticResource MutedText}" 
-                                   MaxHeight="60" TextTrimming="CharacterEllipsis"
-                                   Margin="0,0,0,12"/>
-
-                        <!-- Result Summary -->
-                        <Border Background="#1A2A1A" CornerRadius="6" Padding="12,8" Margin="0,0,0,8">
+                        <TextBlock Text="{Binding GameDescription}" TextWrapping="Wrap" FontSize="13" 
+                                   Foreground="{StaticResource MutedText}" MaxHeight="60" 
+                                   TextTrimming="CharacterEllipsis" Margin="0,0,0,14"/>
+                        <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,12"
+                                BorderBrush="#1A5A30" BorderThickness="1">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#0D2818" Offset="0"/>
+                                    <GradientStop Color="#143A1B" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
                             <TextBlock Text="{Binding ResultSummary}" 
                                        Foreground="#4ADE80" FontSize="13" FontWeight="SemiBold"/>
                         </Border>
-
-                        <!-- Action Buttons -->
                         <StackPanel Orientation="Horizontal">
-                            <Button Content="▶  Install / Play in Steam" 
+                            <Button Content="▶  Install via Steam" 
                                     Command="{Binding InstallGameCommand}"
-                                    Style="{StaticResource SuccessButton}"
-                                    HorizontalAlignment="Left" Padding="12,6" Margin="0,0,12,0"/>
+                                    HorizontalAlignment="Left" Padding="16,8" Margin="0,0,12,0"/>
                             <Button Content="📁  Open Lua Folder" 
                                     Command="{Binding OpenLuaFolderCommand}"
                                     Style="{StaticResource GhostButton}"
-                                    HorizontalAlignment="Left" Padding="12,6"/>
+                                    HorizontalAlignment="Left" Padding="16,8"/>
                         </StackPanel>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- ═══ Status Bar ═══ -->
-            <Border Grid.Row="3" Background="{StaticResource CardBackground}" CornerRadius="10" 
-                    Padding="20,14" Margin="0,0,0,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Status Text -->
-                    <TextBlock Grid.Row="0" Text="{Binding StatusMessage}" 
-                               TextWrapping="Wrap" FontSize="13">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasError}" Value="True">
-                                        <Setter Property="Foreground" Value="#EF4444"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsComplete}" Value="True">
-                                        <Setter Property="Foreground" Value="#4ADE80"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-
-                    <!-- Progress Bar (only visible when downloading) -->
-                    <ProgressBar Grid.Row="1" Value="{Binding Progress}" Maximum="100" 
-                                 Height="6" Margin="0,12,0,0"
+            <!-- Status Bar -->
+            <Border CornerRadius="14" Padding="24,16"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#141420" Offset="0"/>
+                        <GradientStop Color="#161626" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Style="{StaticResource PulsingDot}" 
+                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"
+                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" FontSize="13">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasError}" Value="True">
+                                            <Setter Property="Foreground" Value="#EF4444"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsComplete}" Value="True">
+                                            <Setter Property="Foreground" Value="#10B981"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <ProgressBar Value="{Binding Progress}" Maximum="100" Height="6" Margin="0,14,0,0"
                                  Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"/>
-
-                    <!-- Success Banner -->
-                    <Border Grid.Row="2" CornerRadius="8" Padding="16,12" Margin="0,14,0,0"
+                    <Border CornerRadius="10" Padding="18,14" Margin="0,16,0,0"
                             Visibility="{Binding IsComplete, Converter={StaticResource BoolToVis}}">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                 <GradientStop Color="#0D2818" Offset="0"/>
-                                <GradientStop Color="#143A1B" Offset="1"/>
+                                <GradientStop Color="#0A3A20" Offset="1"/>
                             </LinearGradientBrush>
                         </Border.Background>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="✓" Foreground="#22C55E" FontSize="20" FontWeight="Bold" 
+                            <TextBlock Text="✓" Foreground="#10B981" FontSize="20" FontWeight="Bold" 
                                        Margin="0,0,12,0" VerticalAlignment="Center"/>
                             <TextBlock Text="LUA GENERATED — READY TO USE" 
-                                       Foreground="#4ADE80" FontSize="14" FontWeight="Bold" 
+                                       Foreground="#34D399" FontSize="14" FontWeight="Bold" 
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-
-                    <!-- Error Banner -->
-                    <Border Grid.Row="3" CornerRadius="8" Padding="16,12" Margin="0,14,0,0"
+                    <Border CornerRadius="10" Padding="18,14" Margin="0,16,0,0"
                             Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -183,8 +224,8 @@
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                </Grid>
+                </StackPanel>
             </Border>
-        </Grid>
+        </StackPanel>
     </ScrollViewer>
 </UserControl>

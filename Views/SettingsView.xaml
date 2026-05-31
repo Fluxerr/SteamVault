@@ -4,24 +4,56 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="800">
-    <Grid Margin="32">
+             d:DesignHeight="700" d:DesignWidth="900">
+    <Grid Margin="40,32,40,40">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Settings" Style="{StaticResource TitleText}" Grid.Row="0"/>
+        <StackPanel Grid.Row="0" Margin="0,0,0,8">
+            <TextBlock Text="Settings" Style="{StaticResource TitleText}"/>
+            <TextBlock Text="Configure directory paths, database synchronization, and background operations." 
+                       Style="{StaticResource SubtitleText}" Margin="0,-12,0,24"/>
+        </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,0,16,0">
 
-                <!-- Database Sync -->
-                <Border Background="{StaticResource CardBackground}" CornerRadius="12" Padding="24" Margin="0,0,0,16">
+                <!-- Background Operations & Auto Updates -->
+                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Key &amp; Token Database" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
-                        <TextBlock Text="{Binding DatabaseStats}" Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,16"/>
+                        <TextBlock Text="⚡  Background &amp; Startup Options" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="Set SteamVault to keep your games constantly up-to-date in the background." 
+                                   Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,20"/>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Automatic Background Updates" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,4"/>
+                                <TextBlock Text="Automatically starts SteamVault on system boot (minimized in tray). In the background, it instantly checks for game updates and updates your Lua configurations with zero resources used." 
+                                           Foreground="{StaticResource DimText}" TextWrapping="Wrap" FontSize="12" MaxWidth="580" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                            
+                            <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" 
+                                      IsChecked="{Binding AutoUpdateEnabled, Mode=TwoWay}"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Database Sync -->
+                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="🔑  Key &amp; Token Database" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding DatabaseStats}" Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,20"/>
                         
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -30,38 +62,40 @@
                             </Grid.ColumnDefinitions>
                             
                             <TextBlock Text="{Binding SyncStatusMessage}" TextWrapping="Wrap" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" FontSize="13" Margin="0,0,16,0"/>
-                            <Button Grid.Column="1" Content="🔄  Update Database" Command="{Binding SyncDatabaseCommand}" Width="160" Height="36"/>
+                            <Button Grid.Column="1" Content="🔄  Update Database" Command="{Binding SyncDatabaseCommand}" Width="180" Height="40" Style="{StaticResource GhostButton}"/>
                         </Grid>
                         
-                        <TextBlock Text="Syncs depotkeys.json and appaccesstokens.json from GitHub to support the latest 2026 releases. No API key needed." Foreground="{StaticResource DimText}" FontSize="12" Margin="0,8,0,0"/>
+                        <TextBlock Text="Syncs depotkeys.json and appaccesstokens.json from GitHub to support the latest releases. No Steam API key needed." Foreground="{StaticResource DimText}" FontSize="12" Margin="0,12,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Local Directories -->
-                <Border Background="{StaticResource CardBackground}" CornerRadius="12" Padding="24">
+                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Local Directories" FontWeight="Bold" FontSize="16" Margin="0,0,0,16"/>
+                        <TextBlock Text="📂  Local Directories" FontWeight="Bold" FontSize="16" Margin="0,0,0,16"/>
                         
-                        <TextBlock Text="Steam Main Directory" Style="{StaticResource SubtitleText}" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding Settings.SteamDirectory}" Height="36" VerticalContentAlignment="Center" Margin="0,0,0,16" Tag="e.g. C:\Program Files (x86)\Steam"/>
+                        <TextBlock Text="Steam Main Directory" Style="{StaticResource SubtitleText}" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                        <TextBox Text="{Binding Settings.SteamDirectory, Mode=TwoWay}" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,18" Tag="e.g. C:\Program Files (x86)\Steam"/>
                         
-                        <TextBlock Text="Lua Files Target (.lua)" Style="{StaticResource SubtitleText}" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding Settings.LuaOutputPath}" Height="36" VerticalContentAlignment="Center" Margin="0,0,0,16" Tag="e.g. ...\Steam\config\lua"/>
+                        <TextBlock Text="Lua Files Target Directory (.lua)" Style="{StaticResource SubtitleText}" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                        <TextBox Text="{Binding Settings.LuaOutputPath, Mode=TwoWay}" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,18" Tag="e.g. C:\Program Files (x86)\Steam\config\lua"/>
                         
-                        <TextBlock Text="Manifest Cache (.manifest)" Style="{StaticResource SubtitleText}" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding Settings.ManifestCachePath}" Height="36" VerticalContentAlignment="Center" Margin="0,0,0,0" Tag="e.g. ...\Steam\config\depotcache"/>
+                        <TextBlock Text="Manifest Cache Directory (.manifest)" Style="{StaticResource SubtitleText}" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                        <TextBox Text="{Binding Settings.ManifestCachePath, Mode=TwoWay}" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,0" Tag="e.g. C:\Program Files (x86)\Steam\config\depotcache"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
         </ScrollViewer>
 
+        <!-- Save Button / Feedback Footer -->
         <Grid Grid.Row="2" Margin="0,24,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding StatusMessage}" Foreground="#4CAF50" VerticalAlignment="Center"/>
-            <Button Grid.Column="1" Content="Save Settings" Command="{Binding SaveCommand}" Width="150"/>
+            <TextBlock Text="{Binding StatusMessage}" Foreground="#10B981" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
+            <Button Grid.Column="1" Content="💾  Save Settings" Command="{Binding SaveCommand}" Width="160" Height="40"/>
         </Grid>
     </Grid>
 </UserControl>

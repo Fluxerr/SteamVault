@@ -123,7 +123,71 @@ public class DownloadService
                 return result;
             }
 
-            // Step 4: Generate .lua file
+            // Step 4: Fetch DLC depots
+            var dlcEntries = new List<DlcLuaEntry>();
+            var dlcProcessed = 0;
+            var totalDlcs = game.Dlc?.Count ?? 0;
+
+            if (totalDlcs > 0)
+            {
+                onStatus?.Invoke($"Fetching DLC data ({totalDlcs} DLCs)...");
+                onProgress?.Invoke(72);
+
+                foreach (var dlc in game.Dlc!)
+                {
+                    try
+                    {
+                        // Fetch DLC info (name + image)
+                        var dlcInfo = await _steamApi.GetDlcInfoAsync(dlc.AppId);
+                        if (dlcInfo != null)
+                        {
+                            dlc.Name = dlcInfo.Name;
+                            dlc.HeaderImageUrl = dlcInfo.HeaderImageUrl;
+                        }
+
+                        // Fetch DLC depots
+                        var dlcDepots = await _steamApi.GetDlcDepotsAsync(dlc.AppId);
+                        if (dlcDepots.Count > 0)
+                        {
+                            // Attach decryption keys
+                            var dlcKeysAttached = 0;
+                            foreach (var depot in dlcDepots)
+                            {
+                                var key = _depotKeyService.GetDepotKey(depot.DepotId);
+                                if (!string.IsNullOrWhiteSpace(key))
+                                {
+                                    depot.DecryptionKey = key;
+                                    dlcKeysAttached++;
+                                }
+                            }
+
+                            // Filter to usable
+                            var usableDlcDepots = dlcDepots.Where(d => !string.IsNullOrWhiteSpace(d.ManifestId)).ToList();
+                            if (usableDlcDepots.Count > 0)
+                            {
+                                dlcEntries.Add(new DlcLuaEntry
+                                {
+                                    AppId = dlc.AppId,
+                                    Name = dlc.Name,
+                                    Depots = usableDlcDepots.Select(d => new DepotLuaEntry
+                                    {
+                                        DepotId = d.DepotId,
+                                        DecryptionKey = d.DecryptionKey,
+                                        ManifestId = d.ManifestId
+                                    }).ToList()
+                                });
+                                dlcProcessed++;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Skip DLCs that fail to resolve
+                    }
+                }
+            }
+
+            // Step 5: Generate .lua file
             onStatus?.Invoke("Generating Lua configuration...");
             onProgress?.Invoke(85);
 
@@ -134,7 +198,9 @@ public class DownloadService
                 ManifestId = d.ManifestId
             }).ToList();
 
-            var luaFilePath = _luaGenerator.GenerateLuaFile(appId, game.Name, luaEntries, luaOutputPath, game.AppAccessToken);
+            var luaFilePath = _luaGenerator.GenerateLuaFile(
+                appId, game.Name, luaEntries, luaOutputPath,
+                game.AppAccessToken, dlcEntries.Count > 0 ? dlcEntries : null);
 
             onProgress?.Invoke(100);
 
@@ -143,10 +209,12 @@ public class DownloadService
             result.DepotCount = usableDepots.Count;
             result.KeysAttached = keysAttached;
             result.ManifestsResolved = manifestsResolved;
+            result.DlcCount = dlcProcessed;
+            result.TotalDlcs = totalDlcs;
             result.Game = game;
             result.Depots = depots;
 
-            onStatus?.Invoke($"✓ Done! Generated Lua for {usableDepots.Count} depot(s) — {Path.GetFileName(luaFilePath)}");
+            onStatus?.Invoke($"✓ Done! Generated Lua for {usableDepots.Count} depot(s) + {dlcProcessed} DLC(s) — {Path.GetFileName(luaFilePath)}");
 
             // Save to history
             _settings.Settings.DownloadHistory.Add(new DownloadHistoryEntry
@@ -180,6 +248,8 @@ public class DownloadResult
     public int DepotCount { get; set; }
     public int KeysAttached { get; set; }
     public int ManifestsResolved { get; set; }
+    public int DlcCount { get; set; }
+    public int TotalDlcs { get; set; }
     public GameInfo? Game { get; set; }
     public List<DepotInfo>? Depots { get; set; }
 }

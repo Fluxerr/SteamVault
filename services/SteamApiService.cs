@@ -108,6 +108,15 @@ public class SteamApiService
     }
 
     /// <summary>
+    /// Fetch depot data for a specific DLC app ID
+    /// </summary>
+    public async Task<List<DepotInfo>> GetDlcDepotsAsync(string dlcAppId)
+    {
+        // DLCs use the same api.steamcmd.net endpoint
+        return await GetDepotsFromSteamCmdAsync(dlcAppId);
+    }
+
+    /// <summary>
     /// Gets depots and their manifest IDs directly from api.steamcmd.net.
     /// Returns a list of DepotInfo objects, or empty if not found/error.
     /// </summary>

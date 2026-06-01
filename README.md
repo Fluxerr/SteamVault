@@ -1,7 +1,7 @@
-# 🎮 SteamVault — Get Steam Games for Free
+# SteamVault — Get Steam Games for Free
 
 <p align="center">
-  <strong>🔓 Unlock any game on Steam — no purchase required. Download, install, and play Steam games completely free.</strong>
+  <strong> Unlock any game on Steam — no purchase required. Download, install, and play Steam games completely free.</strong>
 </p>
 
 **SteamVault** is a Windows desktop application that enables you to download, manage, and keep your Steam game depot configurations up to date — completely offline, with **no Steam client required**. It gives you free access to Steam games by generating the necessary configuration files that let you download and play games without owning them.

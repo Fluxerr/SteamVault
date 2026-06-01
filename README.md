@@ -159,7 +159,7 @@ On first launch, SteamVault will guide you through a one-time setup:
 git clone https://github.com/Fluxerr/SteamVault.git
 cd SteamVault
 
-#Drad and drop the OpenSteamTools dlls into the "OpenSteamTools" folder
+#Drad and drop the OpenSteamTool.dll, dwmapi.dll ans xinput1_4.dll into the "OpenSteamTools" folder and delete the existing empty text file.
 
 # Restore packages and build
 dotnet restore

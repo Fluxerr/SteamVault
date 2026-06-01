@@ -10,9 +10,9 @@
 ---
 
 <p align="center">
-  <img src="https://img.shields.io/github/downloads/Fluxerr/SteamVault/total?color=7C3AED&label=Downloads&style=flat-square" alt="Downloads" />
+  <img src="https://img.shields.io/github/downloads/Fluxerr/SteamVault/total?color=7C3AED&label=Downloads&style=flat-square&cacheSeconds=3600" alt="Downloads" />
   &nbsp;
-  <img src="https://img.shields.io/github/stars/Fluxerr/SteamVault?color=F59E0B&style=flat-square" alt="Stars" />
+  <img src="https://img.shields.io/github/stars/Fluxerr/SteamVault?color=F59E0B&style=flat-square&cacheSeconds=3600" alt="Stars" />
 </p>
 
 ---

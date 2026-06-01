@@ -12,11 +12,14 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("SteamVault")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1e7bedac15de8e66be41af84648c15d0e6f1de60")]
+[assembly: System.Reflection.AssemblyCopyrightAttribute("MIT License")]
+[assembly: System.Reflection.AssemblyDescriptionAttribute(("Offline Steam depot manifest manager — download, manage, and keep your Steam game" +
+    " configurations up to date with no Steam client required."))]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("2.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("2.0.0+eb97b4462f2cba36406492e447cd717852982c10")]
 [assembly: System.Reflection.AssemblyProductAttribute("SteamVault")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SteamVault")]
-[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("2.0.0.0")]
 [assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows7.0")]
 [assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows7.0")]
 

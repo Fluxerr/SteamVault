@@ -160,7 +160,8 @@ git clone https://github.com/Fluxerr/SteamVault.git
 cd SteamVault
 
 #Drad and drop the OpenSteamTool.dll,
-#dwmapi.dll and xinput1_4.dll into the #"OpenSteamTools" folder
+#dwmapi.dll and xinput1_4.dll into the
+#"OpenSteamTools" folder
 #and delete the existing empty text file.
 
 # Restore packages and build

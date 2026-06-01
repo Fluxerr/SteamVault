@@ -1,6 +1,10 @@
-# SteamVault — Offline Steam Manifest Manager
+# 🎮 SteamVault — Get Steam Games for Free
 
-**SteamVault** is a Windows desktop application that enables you to download, manage, and keep your Steam game depot configurations up to date — completely offline, with **no Steam client required**.
+<p align="center">
+  <strong>🔓 Unlock any game on Steam — no purchase required. Download, install, and play Steam games completely free.</strong>
+</p>
+
+**SteamVault** is a Windows desktop application that enables you to download, manage, and keep your Steam game depot configurations up to date — completely offline, with **no Steam client required**. It gives you free access to Steam games by generating the necessary configuration files that let you download and play games without owning them.
 
 ![.NET 9](https://img.shields.io/badge/.NET-9.0-7C3AED?logo=dotnet)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-06B6D4?logo=windows)

@@ -150,6 +150,7 @@ On first launch, SteamVault will guide you through a one-time setup:
 ### Prerequisites
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 - Git
+- Download the OpenSteamTool Dll files https://github.com/OpenSteam001/OpenSteamTool/releases/tag/v1.4.6-fix
 
 ### Build Steps
 
@@ -157,6 +158,8 @@ On first launch, SteamVault will guide you through a one-time setup:
 # Clone the repository
 git clone https://github.com/Fluxerr/SteamVault.git
 cd SteamVault
+
+#Drad and drop the OpenSteamTools dlls into the "OpenSteamTools" folder
 
 # Restore packages and build
 dotnet restore

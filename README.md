@@ -161,7 +161,7 @@ dotnet build -c Release
 dotnet run
 ```
 
-The output executable will be at `SteamVault\bin\Release\net9.0-windows\SteamVault.exe` or `SteamVault\Release\SteamVault.exe`.
+The output executable will be at `SteamVault\bin\Release\net9.0-windows\SteamVault.exe`.
 
 ---
 

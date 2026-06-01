@@ -9,6 +9,10 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>SteamVault</AssemblyName>
     <RootNamespace>SteamVault</RootNamespace>
+    <Version>2.0.0</Version>
+    <Authors>SteamVault</Authors>
+    <Description>Offline Steam depot manifest manager — download, manage, and keep your Steam game configurations up to date with no Steam client required.</Description>
+    <Copyright>MIT License</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

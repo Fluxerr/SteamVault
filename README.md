@@ -40,6 +40,7 @@
 ## What is SteamVault?
 
 SteamVault provides a complete offline solution for managing **Steam depot manifests** and **Lua configuration files**. It acts as a localized vault for your game configurations, automatically generating and maintaining the manifest and depot key mappings needed by tools like **OpenSteamTool**.
+This allows you to own steam games for completely free.
 
 **No Steam client, no Steam account, no API key required.** Everything is sourced from publicly available data.
 

@@ -87,7 +87,7 @@ The easiest way to get SteamVault is to download the latest pre-built executable
 
 > **[Download Latest Release](../../releases/latest)**
 
-Simply extract the ZIP and run `SteamVault.exe`. No installer needed.
+Simply extract the ZIP and run `SteamVault_v2.0.0.exe`. No installer needed.
 
 ### First-Run Wizard
 
@@ -161,7 +161,7 @@ dotnet build -c Release
 dotnet run
 ```
 
-The output executable will be at `SteamVault\bin\Release\net9.0-windows\SteamVault.exe`.
+The output executable will be at `SteamVault\bin\Release\net9.0-windows\SteamVault.exe` or `SteamVault\Release\SteamVault.exe`.
 
 ---
 

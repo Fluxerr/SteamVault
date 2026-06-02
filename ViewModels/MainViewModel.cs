@@ -10,6 +10,8 @@ public class MainViewModel : ViewModelBase
     public DashboardViewModel DashboardVM { get; }
     public SettingsViewModel SettingsVM { get; }
     public MyGamesViewModel MyGamesVM { get; }
+    public DiscoverViewModel DiscoverVM { get; }
+    public OnlineViewModel OnlineVM { get; }
 
     private ViewModelBase _currentView = null!;
     public ViewModelBase CurrentView
@@ -22,6 +24,8 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsDashboardActive));
                 OnPropertyChanged(nameof(IsMyGamesActive));
                 OnPropertyChanged(nameof(IsSettingsActive));
+                OnPropertyChanged(nameof(IsDiscoverActive));
+                OnPropertyChanged(nameof(IsOnlineActive));
             }
         }
     }
@@ -29,10 +33,14 @@ public class MainViewModel : ViewModelBase
     public bool IsDashboardActive => CurrentView == DashboardVM;
     public bool IsMyGamesActive => CurrentView == MyGamesVM;
     public bool IsSettingsActive => CurrentView == SettingsVM;
+    public bool IsDiscoverActive => CurrentView == DiscoverVM;
+    public bool IsOnlineActive => CurrentView == OnlineVM;
 
     public ICommand NavigateDashboardCommand { get; }
     public ICommand NavigateSettingsCommand { get; }
     public ICommand NavigateMyGamesCommand { get; }
+    public ICommand NavigateDiscoverCommand { get; }
+    public ICommand NavigateOnlineCommand { get; }
 
     public string GameCount => CountLuaFiles();
 
@@ -63,13 +71,18 @@ public class MainViewModel : ViewModelBase
         SteamApiService steamApi,
         DownloadService downloadService,
         LuaParserService luaParser,
-        GameSearchService searchService)
+        GameSearchService searchService,
+        ExportService exportService,
+        OnlineFixService onlineFixService,
+        GameManagementService gameMgmtService)
     {
         _settingsService = settingsService;
 
-        DashboardVM = new DashboardViewModel(downloadService, searchService);
-        SettingsVM = new SettingsViewModel(settingsService, depotKeyService);
-        MyGamesVM = new MyGamesViewModel(settingsService, steamApi, depotKeyService, luaParser, downloadService);
+        DashboardVM = new DashboardViewModel(downloadService, searchService, steamApi);
+        SettingsVM = new SettingsViewModel(settingsService, depotKeyService, exportService);
+        MyGamesVM = new MyGamesViewModel(settingsService, steamApi, depotKeyService, luaParser, downloadService, gameMgmtService);
+        DiscoverVM = new DiscoverViewModel(steamApi, downloadService);
+        OnlineVM = new OnlineViewModel(settingsService, steamApi, luaParser, onlineFixService);
 
         CurrentView = DashboardVM; // Default view
 
@@ -80,6 +93,14 @@ public class MainViewModel : ViewModelBase
             CurrentView = SettingsVM;
         });
         NavigateMyGamesCommand = new RelayCommand(_ => CurrentView = MyGamesVM);
+        NavigateDiscoverCommand = new RelayCommand(_ =>
+        {
+            if (CurrentView == DiscoverVM)
+                _ = DiscoverVM.LoadAllAsync(); // Refresh on re-click
+            else
+                CurrentView = DiscoverVM;
+        });
+        NavigateOnlineCommand = new RelayCommand(_ => CurrentView = OnlineVM);
 
         // Listen for settings changes to update sidebar
         SettingsVM.PropertyChanged += (_, e) =>

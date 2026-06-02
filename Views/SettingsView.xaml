@@ -48,6 +48,56 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Theme Selection -->
+                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="🎨  Theme" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="Choose a color theme for SteamVault. Changes apply instantly." 
+                                   Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,16"/>
+                        
+                        <ItemsControl ItemsSource="{Binding AvailableThemes}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding}"
+                                            Command="{Binding DataContext.ChangeThemeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Margin="0,0,10,8"
+                                            Padding="16,10"
+                                            FontSize="13"
+                                            Style="{StaticResource GhostButton}"
+                                            Width="150">
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Lua Export -->
+                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="📦  Lua Export / Backup" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="Export all your Lua configs and depot manifests into a ZIP file for backup or transfer." 
+                                   Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,16"/>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding ExportStatus}" TextWrapping="Wrap" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" FontSize="13" Margin="0,0,16,0"/>
+                            <Button Grid.Column="1" Content="🗜  Export Lua ZIP" Command="{Binding ExportLuaCommand}" Width="160" Height="40" Style="{StaticResource GhostButton}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- Database Sync -->
                 <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
                         BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
@@ -80,9 +130,6 @@
                         
                         <TextBlock Text="Lua Files Target Directory (.lua)" Style="{StaticResource SubtitleText}" Margin="0,0,0,6" FontWeight="SemiBold"/>
                         <TextBox Text="{Binding Settings.LuaOutputPath, Mode=TwoWay}" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,18" Tag="e.g. C:\Program Files (x86)\Steam\config\lua"/>
-                        
-                        <TextBlock Text="Manifest Cache Directory (.manifest)" Style="{StaticResource SubtitleText}" Margin="0,0,0,6" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding Settings.ManifestCachePath, Mode=TwoWay}" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,0" Tag="e.g. C:\Program Files (x86)\Steam\config\depotcache"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

@@ -21,9 +21,40 @@ public class LibraryEntry : INotifyPropertyChanged
         get => _headerImageUrl;
         set { _headerImageUrl = value; OnPropertyChanged(); }
     }
+
+    private string _description = "";
+    public string Description
+    {
+        get => _description;
+        set { _description = value; OnPropertyChanged(); }
+    }
+
+    private string _type = "";
+    public string Type
+    {
+        get => _type;
+        set { _type = value; OnPropertyChanged(); }
+    }
+
+    private string _releaseDate = "";
+    public string ReleaseDate
+    {
+        get => _releaseDate;
+        set { _releaseDate = value; OnPropertyChanged(); }
+    }
+
     public DateTime LastUpdated { get; set; }
     public ObservableCollection<LibraryDepotInfo> Depots { get; set; } = new();
     public string LuaFilePath { get; set; } = "";
+
+    private bool _isInstalled;
+    public bool IsInstalled
+    {
+        get => _isInstalled;
+        set { _isInstalled = value; OnPropertyChanged(); OnPropertyChanged(nameof(InstallStatusText)); }
+    }
+
+    public string InstallStatusText => _isInstalled ? "✅ Installed" : "⚠️ Not Installed";
 
     private string _status = "Checking...";
     public string Status

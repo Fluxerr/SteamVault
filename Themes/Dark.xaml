@@ -642,7 +642,7 @@
         </Style.Triggers>
     </Style>
 
-    <!-- ═══ Pulsing Dot Style ═══ -->
+    <!-- ═══ Pulsing Dot Style (Purple accent) ═══ -->
     <Style x:Key="PulsingDot" TargetType="Ellipse">
         <Setter Property="Width" Value="8" />
         <Setter Property="Height" Value="8" />
@@ -669,6 +669,66 @@
                                              From="0.7" To="1.1" Duration="0:0:0.8"/>
                             <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
                                              From="0.7" To="1.1" Duration="0:0:0.8"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ═══ Pulsing Dot Style (Green, for player count) ═══ -->
+    <Style x:Key="PulsingDotGreen" TargetType="Ellipse">
+        <Setter Property="Width" Value="9" />
+        <Setter Property="Height" Value="9" />
+        <Setter Property="Fill" Value="#22C55E" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Visibility}" Value="Visible">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                             From="0.4" To="1" Duration="0:0:0.7"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                             From="0.6" To="1.2" Duration="0:0:0.7"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                             From="0.6" To="1.2" Duration="0:0:0.7"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ═══ Pulsing Dot Style (Amber, for multiplayer warning) ═══ -->
+    <Style x:Key="PulsingDotAmber" TargetType="Ellipse">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Height" Value="10" />
+        <Setter Property="Fill" Value="#FFB84D" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Visibility}" Value="Visible">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                             From="0.3" To="1" Duration="0:0:0.9"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                             From="0.7" To="1.15" Duration="0:0:0.9"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                             From="0.7" To="1.15" Duration="0:0:0.9"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.EnterActions>

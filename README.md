@@ -162,11 +162,31 @@ cd SteamVault
 dotnet restore
 dotnet build -c Release
 
-# Run
+# Run (development)
 dotnet run
 ```
 
-The output executable will be at `SteamVault\bin\Release\net9.0-windows\SteamVault.exe`.
+### Publish (Single-File EXE)
+
+To produce a **single, self-contained `SteamVault.exe`** that bundles the .NET runtime, all dependencies, and OpenSteamTool DLLs into one executable:
+
+```bash
+dotnet publish -c Release -r win-x64 --self-contained true
+```
+
+The output will be a single EXE at:
+
+```
+SteamVault\bin\Release\net9.0-windows\win-x64\publish\SteamVault.exe
+```
+
+> **Key properties** (set in `SteamVault.csproj`):
+> - `PublishSingleFile=true` — packs everything into one EXE
+> - `SelfContained=true` — includes the .NET 9 runtime (no separate .NET install needed)
+> - `IncludeAllContentForSelfExtract=true` — embeds managed DLLs, JSON data files, and OpenSteamTool native DLLs into the EXE
+> - `IncludeNativeLibrariesForSelfExtract=true` — ensures native DLLs like `dwmapi.dll` and `xinput1_4.dll` are also bundled
+>
+> **Distributing**: The single EXE file can be shared directly — no installer, no ZIP extraction, no runtime prerequisites required.
 
 ---
 

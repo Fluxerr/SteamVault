@@ -12,8 +12,8 @@ public class LuaParserService
     // Matches: addappid(12345)
     private static readonly Regex AddAppIdRegex = new(@"addappid\((\d+)\)", RegexOptions.Compiled);
 
-    // Matches: addappid(123456, 0, "DECRYPTION_KEY")
-    private static readonly Regex AddAppIdWithKeyRegex = new(@"addappid\((\d+),\s*0,\s*""([^""]*)""\)", RegexOptions.Compiled);
+    // Matches: addappid(123456, 0, "DECRYPTION_KEY") or addappid(123456, 1, "KEY")
+    private static readonly Regex AddAppIdWithKeyRegex = new(@"addappid\((\d+),\s*\d+,\s*""([^""]*)""\)", RegexOptions.Compiled);
 
     // Matches: addtoken(12345, "TOKEN")
     private static readonly Regex AddTokenRegex = new(@"addtoken\((\d+),\s*""([^""]*)""\)", RegexOptions.Compiled);

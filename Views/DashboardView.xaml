@@ -121,6 +121,24 @@
                     <StackPanel Grid.Column="1" Margin="28,0,0,0">
                         <TextBlock Text="{Binding GameName}" FontSize="26" FontWeight="Bold" 
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        <!-- Multiplayer Warning (with pulsing amber orb) -->
+                        <Border CornerRadius="6" Padding="10,5" Margin="0,0,0,10"
+                                BorderBrush="#8B5A00" BorderThickness="1"
+                                Visibility="{Binding ShowMultiplayerWarning, Converter={StaticResource BoolToVis}}">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#1A1500" Offset="0"/>
+                                    <GradientStop Color="#221800" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource PulsingDotAmber}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="SINGLEPLAYER ONLY — Multiplayer features unavailable in cracked copies" 
+                                           Foreground="#FFB84D" FontSize="12" FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
                             <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
                                 <TextBlock Text="{Binding AppIdInput, StringFormat='ID: {0}'}" 
@@ -136,6 +154,37 @@
                         <TextBlock Text="{Binding GameDescription}" TextWrapping="Wrap" FontSize="13" 
                                    Foreground="{StaticResource MutedText}" MaxHeight="60" 
                                    TextTrimming="CharacterEllipsis" Margin="0,0,0,14"/>
+
+                        <!-- Estimated Size -->
+                        <Border CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
+                                Background="#1A1A2E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                Visibility="{Binding EstimatedSize, Converter={StaticResource BoolToVis}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="💾" FontSize="12" Margin="0,0,6,0"/>
+                                <TextBlock Text="{Binding EstimatedSize, StringFormat='Estimated size: {0}'}" 
+                                           FontSize="12" Foreground="{StaticResource MutedText}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- SteamDB Stats -->
+                        <StackPanel Margin="0,0,0,10" Visibility="{Binding ShowSteamDbStats, Converter={StaticResource BoolToVis}}">
+                            <Border CornerRadius="6" Padding="10,6" Margin="0,0,0,4"
+                                    Background="#1A1A2E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                    Visibility="{Binding PlayerCountText, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Style="{StaticResource PulsingDotGreen}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding PlayerCountText}" FontSize="12" Foreground="{StaticResource MutedText}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <Border CornerRadius="6" Padding="10,6"
+                                    Background="#1A1A2E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                    Visibility="{Binding ReviewScoreText, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⭐" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding ReviewScoreText}" FontSize="12" Foreground="{StaticResource MutedText}"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
                         <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,12"
                                 BorderBrush="#1A5A30" BorderThickness="1">
                             <Border.Background>

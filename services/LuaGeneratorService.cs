@@ -6,14 +6,14 @@ namespace SteamVault.Services;
 /// <summary>
 /// Generates .lua configuration files for OpenSteamTool / SteamTools stplug-in.
 /// 
-/// Correct format (from OpenSteamTool docs):
+/// Correct format (from OpenSteamTool / SteamTools docs):
 ///   addappid(APPID)                          -- register the game
 ///   addtoken(APPID, "ACCESS_TOKEN")          -- app access token (if available)
-///   addappid(DEPOTID, 0, "DECRYPTION_KEY")   -- register depot with key
-///   setManifestid(DEPOTID, "MANIFEST_GID")   -- pin depot to specific manifest
+///   addappid(DEPOTID, 1, "DECRYPTION_KEY")   -- register depot decryption key under its own depot ID
+///   setManifestid(DEPOTID, "MANIFEST_GID")   -- pin specific depot to a manifest (quoted GID)
 ///
-/// OpenSteamTool auto-downloads manifests via steamrun/wudrm APIs,
-/// so we do NOT need to separately download .manifest binary files.
+/// Decryption keys are registered against the DEPOT ID (not the parent app ID).
+/// Each depot gets its own key registration so OpenSteamTool can decrypt it.
 /// </summary>
 public class LuaGeneratorService
 {
@@ -48,7 +48,8 @@ public class LuaGeneratorService
 
         sb.AppendLine();
 
-        // 3. Register each depot with its decryption key and manifest
+        // 3. Register each depot's decryption key and manifest
+        // Key registration uses the DEPOT ID — each depot gets its own key
         foreach (var depot in depots)
         {
             // Skip if depot ID is the same as app ID (already registered above)
@@ -57,7 +58,8 @@ public class LuaGeneratorService
 
             if (!string.IsNullOrWhiteSpace(depot.DecryptionKey))
             {
-                sb.AppendLine($"addappid({depot.DepotId}, 0, \"{depot.DecryptionKey}\")");
+                // Register depot decryption key under the DEPOT's own ID
+                sb.AppendLine($"addappid({depot.DepotId}, 1, \"{depot.DecryptionKey}\")");
             }
             else
             {
@@ -87,7 +89,8 @@ public class LuaGeneratorService
                 {
                     if (!string.IsNullOrWhiteSpace(depot.DecryptionKey))
                     {
-                        sb.AppendLine($"addappid({depot.DepotId}, 0, \"{depot.DecryptionKey}\")");
+                        // DLC key goes under the DEPOT's own ID
+                        sb.AppendLine($"addappid({depot.DepotId}, 1, \"{depot.DecryptionKey}\")");
                     }
                     else
                     {

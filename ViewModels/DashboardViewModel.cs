@@ -13,13 +13,15 @@ public class DashboardViewModel : ViewModelBase
 {
     private readonly DownloadService _downloadService;
     private readonly GameSearchService _searchService;
+    private readonly SteamApiService _steamApi;
     private CancellationTokenSource? _searchCts;
     private System.Timers.Timer? _searchDebounce;
 
-    public DashboardViewModel(DownloadService downloadService, GameSearchService searchService)
+    public DashboardViewModel(DownloadService downloadService, GameSearchService searchService, SteamApiService steamApi)
     {
         _downloadService = downloadService;
         _searchService = searchService;
+        _steamApi = steamApi;
 
         DownloadCommand = new RelayCommand(
             async _ => await DownloadAsync(),
@@ -146,6 +148,41 @@ public class DashboardViewModel : ViewModelBase
         set => SetProperty(ref _gameReleaseDate, value);
     }
 
+    private string? _estimatedSize;
+    public string? EstimatedSize
+    {
+        get => _estimatedSize;
+        set => SetProperty(ref _estimatedSize, value);
+    }
+
+    private bool _showSteamDbStats;
+    public bool ShowSteamDbStats
+    {
+        get => _showSteamDbStats;
+        set => SetProperty(ref _showSteamDbStats, value);
+    }
+
+    private string _playerCountText = "";
+    public string PlayerCountText
+    {
+        get => _playerCountText;
+        set => SetProperty(ref _playerCountText, value);
+    }
+
+    private string _reviewScoreText = "";
+    public string ReviewScoreText
+    {
+        get => _reviewScoreText;
+        set => SetProperty(ref _reviewScoreText, value);
+    }
+
+    private bool _showMultiplayerWarning;
+    public bool ShowMultiplayerWarning
+    {
+        get => _showMultiplayerWarning;
+        set => SetProperty(ref _showMultiplayerWarning, value);
+    }
+
     private string? _resultSummary;
     public string? ResultSummary
     {
@@ -226,6 +263,17 @@ public class DashboardViewModel : ViewModelBase
     // --- Main Download Flow ---
     private async Task DownloadAsync()
     {
+        var appId = AppIdInput.Trim();
+
+        // Ask user if they want to include DLCs
+        bool includeDlcs = false;
+        var dlcChoice = System.Windows.MessageBox.Show(
+            "Do you want to include all available DLCs for this game?",
+            "Include DLCs?",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        includeDlcs = dlcChoice == MessageBoxResult.Yes;
+
         IsDownloading = true;
         IsComplete = false;
         HasError = false;
@@ -240,14 +288,13 @@ public class DashboardViewModel : ViewModelBase
         ShowSearchResults = false;
         CommandManager.InvalidateRequerySuggested();
 
-        var appId = AppIdInput.Trim();
-
         try
         {
             var result = await _downloadService.DownloadGameAsync(
                 appId,
                 onStatus: msg => Application.Current?.Dispatcher.Invoke(() => StatusMessage = msg),
-                onProgress: pct => Application.Current?.Dispatcher.Invoke(() => Progress = pct));
+                onProgress: pct => Application.Current?.Dispatcher.Invoke(() => Progress = pct),
+                includeDlcs: includeDlcs);
 
             Application.Current?.Dispatcher.Invoke(() =>
             {
@@ -260,6 +307,15 @@ public class DashboardViewModel : ViewModelBase
                     GameType = result.Game?.Type;
                     GameReleaseDate = result.Game?.ReleaseDate;
                     _lastLuaFilePath = result.LuaFilePath;
+                    ShowMultiplayerWarning = result.Game?.HasMultiplayerCategories ?? false;
+
+                    // Compute estimated size
+                    var totalBytes = result.Depots?.Sum(d => d.SizeBytes) ?? 0;
+                    if (totalBytes > 0)
+                        EstimatedSize = FormatBytes(totalBytes);
+                    else
+                        EstimatedSize = null;
+
                     var dlcText = result.DlcCount > 0 ? $" · {result.DlcCount} DLC(s)" : "";
                     ResultSummary = $"{result.DepotCount} depot(s) · {result.KeysAttached} key(s){dlcText} · Lua saved";
                     StatusMessage = $"✓ {result.GameName} installed successfully!";
@@ -272,6 +328,36 @@ public class DashboardViewModel : ViewModelBase
                 }
 
                 CommandManager.InvalidateRequerySuggested();
+            });
+
+            // Fetch SteamDB-style stats asynchronously (non-blocking)
+            _ = Task.Run(async () =>
+            {
+                var stats = await _steamApi.GetSteamDbStatsAsync(appId);
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    if (stats != null)
+                    {
+                        if (stats.CurrentPlayers > 0)
+                        {
+                            PlayerCountText = stats.CurrentPlayers >= 1000
+                                ? $"{stats.CurrentPlayers:N0} playing now"
+                                : $"{stats.CurrentPlayers} playing now";
+                        }
+
+                        if (stats.MetacriticScore > 0)
+                        {
+                            ReviewScoreText += $"Metacritic: {stats.MetacriticScore} · ";
+                        }
+
+                        if (stats.PositiveReviewPercent > 0)
+                        {
+                            ReviewScoreText += $"{stats.PositiveReviewPercent}% positive";
+                        }
+
+                        ShowSteamDbStats = !string.IsNullOrEmpty(PlayerCountText) || !string.IsNullOrEmpty(ReviewScoreText);
+                    }
+                });
             });
         }
         catch (Exception ex)
@@ -299,6 +385,20 @@ public class DashboardViewModel : ViewModelBase
                 });
             }
         }
+    }
+
+    /// <summary>
+    /// Formats a byte count into human-readable form (e.g. "~23.4 GB").
+    /// </summary>
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes >= 1_073_741_824)
+            return $"~{bytes / 1_073_741_824.0:F1} GB";
+        if (bytes >= 1_048_576)
+            return $"~{bytes / 1_048_576.0:F0} MB";
+        if (bytes >= 1_024)
+            return $"~{bytes / 1_024.0:F0} KB";
+        return $"{bytes} B";
     }
 
     private void InstallGame()

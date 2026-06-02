@@ -1,0 +1,57 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ═══ Color Palette — Emerald Night ═══ -->
+    <Color x:Key="WindowBackgroundColor">#0A1210</Color>
+    <Color x:Key="SidebarBackgroundColor">#0E1614</Color>
+    <Color x:Key="CardBackgroundColor">#141E1C</Color>
+    <Color x:Key="CardHoverColor">#1C2824</Color>
+    <Color x:Key="PrimaryAccentColor">#00E676</Color>
+    <Color x:Key="PrimaryAccentHoverColor">#33FF88</Color>
+    <Color x:Key="PrimaryAccentDarkColor">#00B359</Color>
+    <Color x:Key="PrimaryAccentGlowColor">#66FFBB</Color>
+    <Color x:Key="SecondaryAccentColor">#18FFFF</Color>
+    <Color x:Key="SuccessColor">#00E676</Color>
+    <Color x:Key="SuccessDarkColor">#00B359</Color>
+    <Color x:Key="WarningColor">#FFD740</Color>
+    <Color x:Key="ErrorColor">#FF5252</Color>
+    <Color x:Key="TextColor">#E0F5EC</Color>
+    <Color x:Key="MutedTextColor">#88AA99</Color>
+    <Color x:Key="DimTextColor">#558866</Color>
+    <Color x:Key="BorderColor">#1E302A</Color>
+    <Color x:Key="InputBackgroundColor">#0F1A18</Color>
+    <Color x:Key="SidebarActiveColor">#1A3028</Color>
+
+    <SolidColorBrush x:Key="WindowBackground" Color="{StaticResource WindowBackgroundColor}" />
+    <SolidColorBrush x:Key="SidebarBackground" Color="{StaticResource SidebarBackgroundColor}" />
+    <SolidColorBrush x:Key="CardBackground" Color="{StaticResource CardBackgroundColor}" />
+    <SolidColorBrush x:Key="CardHover" Color="{StaticResource CardHoverColor}" />
+    <SolidColorBrush x:Key="PrimaryAccent" Color="{StaticResource PrimaryAccentColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentHover" Color="{StaticResource PrimaryAccentHoverColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentDark" Color="{StaticResource PrimaryAccentDarkColor}" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="SuccessDarkBrush" Color="{StaticResource SuccessDarkColor}" />
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+    <SolidColorBrush x:Key="Text" Color="{StaticResource TextColor}" />
+    <SolidColorBrush x:Key="MutedText" Color="{StaticResource MutedTextColor}" />
+    <SolidColorBrush x:Key="DimText" Color="{StaticResource DimTextColor}" />
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="InputBackground" Color="{StaticResource InputBackgroundColor}" />
+
+    <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#00E676" Offset="0"/>
+        <GradientStop Color="#18FFFF" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="SidebarGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#0E1614" Offset="0"/>
+        <GradientStop Color="#0A1210" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="CardGlowBorder" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#1E302A" Offset="0"/>
+        <GradientStop Color="#0A4A30" Offset="0.5"/>
+        <GradientStop Color="#1E302A" Offset="1"/>
+    </LinearGradientBrush>
+</ResourceDictionary>

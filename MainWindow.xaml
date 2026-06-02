@@ -26,7 +26,7 @@
                     <TextBlock Text="⚡" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
                     <TextBlock Text="STEAMVAULT" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"
                                Foreground="{StaticResource MutedText}"/>
-                    <TextBlock Text="v2.0" FontSize="10" Foreground="{StaticResource DimText}" 
+                     <TextBlock Text="v2.5.0" FontSize="10" Foreground="{StaticResource DimText}" 
                                VerticalAlignment="Center" Margin="8,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" WindowChrome.IsHitTestVisibleInChrome="True">
@@ -62,8 +62,12 @@
                                    Margin="28,0,0,12"/>
                         <RadioButton Content="🏠  Dashboard" Command="{Binding NavigateDashboardCommand}" 
                                      IsChecked="{Binding IsDashboardActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
+                        <RadioButton Content="🔍  Discover" Command="{Binding NavigateDiscoverCommand}" 
+                                     IsChecked="{Binding IsDiscoverActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
                         <RadioButton Content="🎮  My Games" Command="{Binding NavigateMyGamesCommand}" 
                                      IsChecked="{Binding IsMyGamesActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
+                        <RadioButton Content="🌐  Online" Command="{Binding NavigateOnlineCommand}" 
+                                     IsChecked="{Binding IsOnlineActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
                         <RadioButton Content="⚙  Settings" Command="{Binding NavigateSettingsCommand}" 
                                      IsChecked="{Binding IsSettingsActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
                     </StackPanel>
@@ -112,6 +116,12 @@
                                 </DataTemplate>
                                 <DataTemplate DataType="{x:Type viewmodels:SettingsViewModel}">
                                     <views:SettingsView />
+                                </DataTemplate>
+                                <DataTemplate DataType="{x:Type viewmodels:DiscoverViewModel}">
+                                    <views:DiscoverView />
+                                </DataTemplate>
+                                <DataTemplate DataType="{x:Type viewmodels:OnlineViewModel}">
+                                    <views:OnlineView />
                                 </DataTemplate>
                             </ContentControl.Resources>
                         </ContentControl>

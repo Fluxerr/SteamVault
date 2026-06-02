@@ -12,7 +12,6 @@
         <converters:InvertibleBoolToVisibilityConverter x:Key="BoolToVis" />
         <converters:StringEqualityToVisibilityConverter x:Key="StringEqualsToVis" />
 
-        <!-- Up to Date Pill Button -->
         <Style x:Key="UpToDateButton" TargetType="Button">
             <Setter Property="Background" Value="#102A1A" />
             <Setter Property="Foreground" Value="#10B981" />
@@ -40,209 +39,262 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <Grid Margin="40,32,40,40">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>  <!-- Header -->
-                <RowDefinition Height="Auto"/>  <!-- Search & Toolbar -->
-                <RowDefinition Height="*"/>     <!-- Games Grid -->
-                <RowDefinition Height="Auto"/>  <!-- Batch progress -->
-            </Grid.RowDefinitions>
+            <!-- ═══ GAME GRID (default) ═══ -->
+            <Grid Visibility="{Binding ShowGameGrid, Converter={StaticResource BoolToVis}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-            <!-- ═══ Header ═══ -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                <TextBlock Text="My Games" Style="{StaticResource TitleText}"/>
-                <TextBlock Text="Scan and manage your local Lua vault. Batch check or update manifests with a single click." 
-                           Style="{StaticResource SubtitleText}" Margin="0,-12,0,12"/>
-            </StackPanel>
-
-            <!-- ═══ Search & Action Toolbar ═══ -->
-            <Grid Grid.Row="1" Margin="0,0,0,24">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <TextBox Grid.Column="0" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
-                         Height="42" FontSize="14" VerticalContentAlignment="Center"
-                         Tag="🔍  Filter local games by name or App ID..."/>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
-                    <Button Content="🔄  Refresh" 
-                            Command="{Binding RefreshCommand}"
-                            Style="{StaticResource GhostButton}" 
-                            Width="120" Height="42" Margin="0,0,8,0"/>
-
-                    <Button Content="⚡  Update All" 
-                            Command="{Binding UpdateAllCommand}"
-                            Width="140" Height="42"/>
+                <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                    <TextBlock Text="My Games" Style="{StaticResource TitleText}"/>
+                    <TextBlock Text="Scan and manage your local Lua vault. Batch check or update manifests with a single click." 
+                               Style="{StaticResource SubtitleText}" Margin="0,-12,0,12"/>
                 </StackPanel>
+
+                <Grid Grid.Row="1" Margin="0,0,0,24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                             Height="42" FontSize="14" VerticalContentAlignment="Center"
+                             Tag="🔍  Filter local games by name or App ID..."/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+                        <Button Content="🔄  Refresh" Command="{Binding RefreshCommand}"
+                                Style="{StaticResource GhostButton}" Width="120" Height="42" Margin="0,0,8,0"/>
+                        <Button Content="⚡  Update All" Command="{Binding UpdateAllCommand}" Width="140" Height="42"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Grid.Row="2">
+                    <ItemsControl ItemsSource="{Binding Games}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="2" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="GameCard" Margin="8" 
+                                        Background="{StaticResource CardBackground}" 
+                                        CornerRadius="14" Padding="0"
+                                        BorderBrush="#1E1E30" BorderThickness="1"
+                                        Cursor="Hand"
+                                        MouseLeftButtonDown="GameCard_Click">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="130"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Border Grid.Row="0" CornerRadius="13,13,0,0" ClipToBounds="True">
+                                            <Grid>
+                                                <Image Source="{Binding HeaderImageUrl}" 
+                                                       Stretch="UniformToFill" HorizontalAlignment="Center"
+                                                       Style="{StaticResource FadeInImage}"/>
+                                                <Border>
+                                                    <Border.Background>
+                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                            <GradientStop Color="Transparent" Offset="0.5"/>
+                                                            <GradientStop Color="#CC0A0A14" Offset="1"/>
+                                                        </LinearGradientBrush>
+                                                    </Border.Background>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                        <StackPanel Grid.Row="1" Margin="18,14,18,18">
+                                            <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="Bold"
+                                                       TextTrimming="CharacterEllipsis" Margin="0,0,0,8"/>
+                                            <Grid Margin="0,0,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Background="#1A1A2E" CornerRadius="6" Padding="8,3">
+                                                    <TextBlock Text="{Binding AppId, StringFormat='App ID {0}'}" 
+                                                               FontSize="11" Foreground="{StaticResource MutedText}"/>
+                                                </Border>
+                                                <!-- Install Status -->
+                                                <Border Grid.Column="2" CornerRadius="6" Padding="10,3" Margin="0,0,0,0">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="#2A1A0A"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                                    <Setter Property="Background" Value="#102A1A"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding InstallStatusText}" FontSize="11" FontWeight="Bold"
+                                                               Foreground="{StaticResource MutedText}"/>
+                                                </Border>
+                                            </Grid>
+                                            <!-- Status + Progress -->
+                                            <Grid Margin="0,0,0,8">
+                                                <Border Grid.Column="0" CornerRadius="6" Padding="8,3"
+                                                        HorizontalAlignment="Left"
+                                                        Background="{Binding StatusBrush, FallbackValue=#1A1A2E}">
+                                                    <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                            </Grid>
+                                            <ProgressBar Value="{Binding UpdateProgress}" Maximum="100" Height="5" Margin="0,0,0,8"
+                                                         Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVis}}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <Trigger SourceName="GameCard" Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="GameCard" Property="BorderBrush" Value="{StaticResource PrimaryAccent}"/>
+                                        <Setter TargetName="GameCard" Property="Background" Value="{StaticResource CardHover}"/>
+                                    </Trigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+
+                <Border Grid.Row="3" Background="{StaticResource CardBackground}" CornerRadius="12" 
+                        Padding="16,14" Margin="0,16,0,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                        Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Ellipse Style="{StaticResource PulsingDot}" VerticalAlignment="Center" Margin="0,0,10,0" Visibility="Visible"/>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource MutedText}" FontSize="13" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
             </Grid>
 
-            <!-- ═══ No Games Placeholder ═══ -->
-            <Border Grid.Row="2" 
-                    Background="{StaticResource CardBackground}" 
-                    CornerRadius="14" Padding="48,80"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                    Visibility="{Binding HasNoGames, Converter={StaticResource BoolToVis}}"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="📂" FontSize="56" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                    <TextBlock Text="No Games Found in Vault" FontSize="20" FontWeight="Bold" 
-                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                    <TextBlock Text="Your Steam config/lua directory appears to be empty. Search and download some game manifests on the Dashboard first!" 
-                               Foreground="{StaticResource MutedText}" FontSize="13" 
-                               TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"
-                               MaxWidth="420"/>
-                </StackPanel>
-            </Border>
+            <!-- ═══ GAME DETAIL VIEW ═══ -->
+            <Grid Visibility="{Binding ShowGameDetail, Converter={StaticResource BoolToVis}}">
+                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="28"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="280"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-            <!-- ═══ Games Grid ═══ -->
-            <Grid Grid.Row="2" 
-                  Visibility="{Binding HasNoGames, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
-                <ItemsControl ItemsSource="{Binding Games}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Columns="2" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
+                        <Border Grid.Column="0" CornerRadius="10" ClipToBounds="True" VerticalAlignment="Top">
+                            <Image Source="{Binding SelectedGame.HeaderImageUrl}" Stretch="Uniform" Width="280"
+                                   Style="{StaticResource FadeInImage}"/>
+                        </Border>
 
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <!-- Game Card with Hover Glow -->
-                            <Border x:Name="GameCard" Margin="8" 
-                                    Background="{StaticResource CardBackground}" 
-                                    CornerRadius="14" Padding="0"
-                                    BorderBrush="#1E1E30" BorderThickness="1"
-                                    ToolTipService.ToolTip="{Binding Name}"
-                                    ToolTipService.Placement="Mouse"
-                                    ToolTipService.ShowDuration="5000">
-                                <Border.Resources>
-                                    <Style TargetType="ToolTip" BasedOn="{StaticResource PremiumToolTip}">
-                                        <Setter Property="Content">
-                                            <Setter.Value>
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13" 
-                                                               Margin="0,0,0,4" Foreground="White"/>
-                                                    <TextBlock FontSize="11" Foreground="{StaticResource MutedText}">
-                                                        <Run Text="App ID:"/>
-                                                        <Run Text="{Binding AppId}" Foreground="{StaticResource PrimaryAccent}"/>
-                                                    </TextBlock>
-                                                    <TextBlock Text="{Binding Status, StringFormat='Status: {0}'}" 
-                                                               FontSize="11" Foreground="{StaticResource MutedText}" Margin="0,2,0,0"/>
-                                                </StackPanel>
-                                            </Setter.Value>
-                                        </Setter>
+                        <StackPanel Grid.Column="1" Margin="28,0,0,0">
+                            <Button Content="←  Back to Library" Command="{Binding BackToGridCommand}"
+                                    Style="{StaticResource GhostButton}" HorizontalAlignment="Left"
+                                    Padding="14,8" Margin="0,0,0,16" FontSize="12"/>
+
+                            <TextBlock Text="{Binding SelectedGame.Name}" FontSize="24" FontWeight="Bold" 
+                                       TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                            <!-- Badges -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding SelectedGame.AppId, StringFormat='ID: {0}'}" 
+                                               FontSize="12" Foreground="{StaticResource MutedText}"/>
+                                </Border>
+                                <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding SelectedGame.Type}" FontSize="12" Foreground="{StaticResource MutedText}"/>
+                                </Border>
+                                <Border Background="#1E1E30" CornerRadius="6" Padding="10,4">
+                                    <TextBlock Text="{Binding SelectedGame.ReleaseDate}" FontSize="12" Foreground="{StaticResource MutedText}"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Install Status -->
+                            <Border CornerRadius="6" Padding="10,5" Margin="0,0,0,10">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#2A1A0A"/>
+                                        <Setter Property="BorderBrush" Value="#8B5A00"/>
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedGame.IsInstalled}" Value="True">
+                                                <Setter Property="Background" Value="#102A1A"/>
+                                                <Setter Property="BorderBrush" Value="#0A5A30"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
-                                </Border.Resources>
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="130"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Game store image banner with fade-in -->
-                                    <Border Grid.Row="0" CornerRadius="13,13,0,0" ClipToBounds="True">
-                                        <Grid>
-                                            <Image Source="{Binding HeaderImageUrl}" 
-                                                   Stretch="UniformToFill" 
-                                                   HorizontalAlignment="Center"
-                                                   Style="{StaticResource FadeInImage}"/>
-                                            <Border>
-                                                <Border.Background>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                        <GradientStop Color="Transparent" Offset="0.5"/>
-                                                        <GradientStop Color="#CC0A0A14" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Border.Background>
-                                            </Border>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- Game Details and Actions -->
-                                    <StackPanel Grid.Row="1" Margin="18,14,18,18">
-                                        <TextBlock Text="{Binding Name}" 
-                                                   FontSize="17" FontWeight="Bold"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Margin="0,0,0,8"/>
-
-                                        <Grid Margin="0,0,0,12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <Border Background="#1A1A2E" CornerRadius="6" Padding="8,3">
-                                                <TextBlock Text="{Binding AppId, StringFormat='App ID {0}'}" 
-                                                           FontSize="11" Foreground="{StaticResource MutedText}"/>
-                                            </Border>
-
-                                            <Border Grid.Column="2" CornerRadius="6" Padding="10,3"
-                                                    Background="{Binding StatusBrush, FallbackValue=#1A1A2E}">
-                                                <TextBlock Text="{Binding Status}" 
-                                                           FontSize="11" FontWeight="Bold"
-                                                           Foreground="White"/>
-                                            </Border>
-                                        </Grid>
-
-                                        <TextBlock Text="{Binding LastUpdated, StringFormat='Last generated: {0:g}'}" 
-                                                   FontSize="11" Foreground="{StaticResource DimText}"
-                                                   Margin="0,0,0,14"/>
-
-                                        <ProgressBar Value="{Binding UpdateProgress}" Maximum="100" 
-                                                     Height="5" Margin="0,0,0,12"
-                                                     Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVis}}"/>
-
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <Button Content="⬇  Update" 
-                                                    Command="{Binding DataContext.UpdateGameCommand, 
-                                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    Visibility="{Binding CanUpdate, Converter={StaticResource BoolToVis}}"
-                                                    HorizontalAlignment="Left"/>
-
-                                            <Button Content="✓  Up to Date" 
-                                                    Style="{StaticResource UpToDateButton}"
-                                                    Visibility="{Binding Status, Converter={StaticResource StringEqualsToVis}, ConverterParameter=Up to Date}"
-                                                    HorizontalAlignment="Left"/>
-
-                                            <Button Grid.Column="1" Content="📁  Lua Folder" 
-                                                    Command="{Binding DataContext.OpenGameFolderCommand, 
-                                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    Style="{StaticResource GhostButton}"
-                                                    FontSize="11" Padding="12,6"/>
-                                        </Grid>
-                                    </StackPanel>
-                                </Grid>
+                                </Border.Style>
+                                <TextBlock Text="{Binding SelectedGame.InstallStatusText}" FontWeight="SemiBold" FontSize="13">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#F59E0B"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedGame.IsInstalled}" Value="True">
+                                                    <Setter Property="Foreground" Value="#10B981"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </Border>
-                            <DataTemplate.Triggers>
-                                <Trigger SourceName="GameCard" Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="GameCard" Property="BorderBrush" Value="#7C3AED"/>
-                                </Trigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Grid>
 
-            <!-- ═══ Footer Batch scan status with Pulsing Dot ═══ -->
-            <Border Grid.Row="3" Background="{StaticResource CardBackground}" CornerRadius="12" 
-                    Padding="16,14" Margin="0,16,0,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                    Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Ellipse x:Name="ScanDot" Width="8" Height="8" Margin="0,0,10,0" 
-                             VerticalAlignment="Center" Visibility="Visible"
-                             Style="{StaticResource PulsingDot}"/>
-                    <TextBlock Text="{Binding StatusMessage}" 
-                               Foreground="{StaticResource MutedText}" FontSize="13" 
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-            </Border>
+                            <!-- Description -->
+                            <TextBlock Text="{Binding SelectedGame.Description}" TextWrapping="Wrap" FontSize="13" 
+                                       Foreground="{StaticResource MutedText}" Margin="0,0,0,12"/>
+
+                            <!-- Status -->
+                            <TextBlock Text="{Binding DetailStatusMessage}" TextWrapping="Wrap" FontSize="12" 
+                                       Foreground="{StaticResource DimText}" Margin="0,0,0,16"/>
+
+                            <!-- Action Buttons -->
+                            <WrapPanel>
+                                <!-- Launch (only if installed) -->
+                                <Button Content="▶  Launch Game" 
+                                        Command="{Binding LaunchGameCommand}"
+                                        CommandParameter="{Binding SelectedGame}"
+                                        HorizontalAlignment="Left" Padding="18,10" Margin="0,0,12,12"
+                                        Visibility="{Binding SelectedGame.IsInstalled, Converter={StaticResource BoolToVis}}"/>
+
+                                <!-- Open Installed Folder (only if installed) -->
+                                <Button Content="📁  Game Folder" 
+                                        Command="{Binding OpenInstallFolderCommand}"
+                                        CommandParameter="{Binding SelectedGame}"
+                                        Style="{StaticResource GhostButton}"
+                                        HorizontalAlignment="Left" Padding="16,10" Margin="0,0,12,12"
+                                        Visibility="{Binding SelectedGame.IsInstalled, Converter={StaticResource BoolToVis}}"/>
+
+                                <!-- Open Lua Folder -->
+                                <Button Content="📄  Lua Folder" 
+                                        Command="{Binding OpenLuaFolderCommand}"
+                                        CommandParameter="{Binding SelectedGame}"
+                                        Style="{StaticResource GhostButton}"
+                                        HorizontalAlignment="Left" Padding="16,10" Margin="0,0,12,12"/>
+
+                                <!-- Delete -->
+                                <Button Content="🗑  Delete Game" 
+                                        Command="{Binding DeleteGameCommand}"
+                                        CommandParameter="{Binding SelectedGame}"
+                                        Background="#2A0D0D" Foreground="#EF4444"
+                                        BorderBrush="#4A1A1A" BorderThickness="1"
+                                        HorizontalAlignment="Left" Padding="16,10" Margin="0,0,12,12"
+                                        FontWeight="SemiBold" FontSize="13" Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="DeleteBorder" Background="{TemplateBinding Background}" 
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="DeleteBorder" Property="Background" Value="#3A1414"/>
+                                                    <Setter TargetName="DeleteBorder" Property="BorderBrush" Value="#EF4444"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
     </ScrollViewer>
 </UserControl>

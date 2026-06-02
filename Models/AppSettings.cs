@@ -6,7 +6,6 @@ public class AppSettings
 {
     public string SteamDirectory { get; set; } = "";
     public string LuaOutputPath { get; set; } = "";
-    public string ManifestCachePath { get; set; } = "";
     public List<DownloadHistoryEntry> DownloadHistory { get; set; } = new();
 
     /// <summary>
@@ -20,6 +19,17 @@ public class AppSettings
     /// and automatically scan + update all game Lua configs on launch.
     /// </summary>
     public bool AutoUpdateEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Currently selected theme name. Default is "Dark" (the original premium purple theme).
+    /// Valid values: "Dark", "AmoledBlack", "MidnightBlue", "SlateGray", "EmeraldNight"
+    /// </summary>
+    public string Theme { get; set; } = "Dark";
+
+    /// <summary>
+    /// Default export / backup directory. If empty, the user is prompted.
+    /// </summary>
+    public string LastExportDirectory { get; set; } = "";
 
     /// <summary>
     /// Auto-detects Steam directory from common paths if not already set.
@@ -66,9 +76,6 @@ public class AppSettings
     {
         if (string.IsNullOrWhiteSpace(LuaOutputPath))
             LuaOutputPath = Path.Combine(SteamDirectory, "config", "lua");
-
-        if (string.IsNullOrWhiteSpace(ManifestCachePath))
-            ManifestCachePath = Path.Combine(SteamDirectory, "config", "depotcache");
     }
 }
 

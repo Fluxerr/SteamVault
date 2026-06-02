@@ -287,7 +287,7 @@ public class InstallationViewModel : ViewModelBase
     {
         _settingsService.Settings.SteamDirectory = SteamDirectory;
         _settingsService.Settings.LuaOutputPath = Path.Combine(SteamDirectory, "config", "lua");
-        _settingsService.Settings.ManifestCachePath = Path.Combine(SteamDirectory, "config", "depotcache");
+
         _settingsService.Settings.IsInstalled = true;
         _settingsService.Save();
 
@@ -388,32 +388,27 @@ public class OpenSteamToolInstaller
             }
         }
 
-        var luaPath = Path.Combine(steamDirectory, "config", "lua");
-        var manifestPath = Path.Combine(steamDirectory, "config", "depotcache");
+        // Create config\lua and config\depotcache directories
+        var configDir = Path.Combine(steamDirectory, "config");
+        var luaPath = Path.Combine(configDir, "lua");
+        var depotcachePath = Path.Combine(configDir, "depotcache");
 
         try
         {
-            if (!Directory.Exists(luaPath))
-                Directory.CreateDirectory(luaPath);
-            result.DirsCreated++;
+            var dirsToCreate = new[] { luaPath, depotcachePath };
+            foreach (var dir in dirsToCreate)
+            {
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                    result.DirsCreated++;
+                }
+            }
         }
         catch (UnauthorizedAccessException)
         {
             needsAdmin = true;
-            result.ErrorMessage = "Need admin permissions to create the Lua config directory.";
-            return result;
-        }
-
-        try
-        {
-            if (!Directory.Exists(manifestPath))
-                Directory.CreateDirectory(manifestPath);
-            result.DirsCreated++;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            needsAdmin = true;
-            result.ErrorMessage = "Need admin permissions to create the depotcache directory.";
+            result.ErrorMessage = "Need admin permissions to create config directories.";
             return result;
         }
 

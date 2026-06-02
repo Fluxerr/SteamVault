@@ -115,9 +115,13 @@ public partial class App : Application
         var depotKeyService = new DepotKeyService();
         var steamApi = new SteamApiService();
         var luaGenerator = new LuaGeneratorService();
+        var manifestDownloader = new ManifestDownloadService(_settingsService!);
         var luaParser = new LuaParserService();
         var searchService = new GameSearchService();
-        var downloadService = new DownloadService(steamApi, depotKeyService, luaGenerator, _settingsService!);
+        var downloadService = new DownloadService(steamApi, depotKeyService, luaGenerator, manifestDownloader, _settingsService!);
+        var exportService = new ExportService(_settingsService!);
+        var onlineFixService = new OnlineFixService(_settingsService!);
+        var gameMgmtService = new GameManagementService(_settingsService!, onlineFixService);
 
         _autoUpdateService = new AutoUpdateService(
             _settingsService!,
@@ -126,13 +130,19 @@ public partial class App : Application
             luaParser,
             downloadService);
 
+        // Apply saved theme on startup
+        ThemeManager.ApplySavedTheme(_settingsService!.Settings.Theme);
+
         var mainVM = new MainViewModel(
             _settingsService!,
             depotKeyService,
             steamApi,
             downloadService,
             luaParser,
-            searchService);
+            searchService,
+            exportService,
+            onlineFixService,
+            gameMgmtService);
 
         // Initialize System Tray Icon (only once)
         if (_notifyIcon == null)

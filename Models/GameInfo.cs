@@ -17,6 +17,16 @@ public class GameInfo
     public List<DepotInfo> Depots { get; set; } = new();
     public List<DlcInfo> Dlc { get; set; } = new();
     public string? AppAccessToken { get; set; }
+    /// <summary>
+    /// OpenSteamTool v1.4.7+ AppTicket hex string (for SteamStub-only games).
+    /// Extracted via the extract_tickets tool. When set, setAppTicket() is written to Lua.
+    /// </summary>
+    public string? AppTicket { get; set; }
+    /// <summary>
+    /// OpenSteamTool v1.4.7+ ETicket hex string.
+    /// Extracted via the extract_tickets tool. When set, setETicket() is written to Lua.
+    /// </summary>
+    public string? ETicket { get; set; }
     public string ReleaseDate { get; set; } = "";
     /// <summary>
     /// Categories from Steam API (e.g. "Single-player", "Multi-player", "Co-op").

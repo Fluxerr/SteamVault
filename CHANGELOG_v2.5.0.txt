@@ -1,0 +1,256 @@
+SteamVault v2.5.0 — Changelog
+June 2, 2026
+
+This is the first major update since the initial v2.0 release. v2.5.0 adds a Discover tab,
+an Online multiplayer fix tab, a theme system with five built-in palettes, DLC support,
+Lua backup exports, SteamDB live stats, fuzzy search, and direct CDN manifest downloads
+via SteamKit2. All changes are detailed below.
+
+================================================================================
+NEW FEATURES
+================================================================================
+
+1. DISCOVER TAB
+----------------------------------------------------------------
+An entirely new tab that connects to Steam's storefront API and presents a curated
+browsing experience directly inside SteamVault.
+
+Steam Store Categories
+  - Four curated sections: Trending, Top Sellers, New Releases, and Free Games.
+  - Each section loads from steam's /api/featuredcategories endpoint.
+  - Results are filtered to show only base games — hardware entries (Steam Deck,
+    Steam Controller, Steam Link) are blacklisted by App ID, and DLC bundles are
+    filtered by name patterns (edition, pack, bundle, deluxe, premium, etc.).
+  - Grid layout displays 9 cards per section in a responsive 3-column layout.
+
+Game Detail View
+  Clicking any game card transitions to a detail panel showing:
+  - Full capsule image and game description from the Steam store API.
+  - Release date and game type.
+  - Current player count (live from SteamDB), formatted with thousands separators.
+  - Metacritic score when available.
+  - Steam review percentage with positive/negative ratio.
+  - Multiplayer warning indicator when a game has online multiplayer categories
+    (directing users to the Online tab for fix integration).
+
+One-click Download
+  - Download Config button requests DLC inclusion via a prompt dialog.
+  - Downloads depot manifests and Lua configuration files with real-time progress.
+  - Install button launches steam://install/{appId} via shell execute.
+
+Backend
+  - DiscoverViewModel orchestrates async loading, detail fetching, and download flow.
+  - SteamApiService.GetAppDetailsAsync retrieves store page data per App ID.
+  - SteamApiService.GetSteamDbStatsAsync fetches live player counts and scores.
+  - New SearchResult model property: MatchScore for sorting.
+
+2. ONLINE TAB
+----------------------------------------------------------------
+A new tab for managing multiplayer fixes sourced from online-fix.me.
+
+Library Scanning
+  - Reads every .lua file from the user's configured Lua directory.
+  - Cross-references each game against Steam's category data to detect games with
+    online multiplayer categories (categories 1, 8, 20, 27, 29, 36, 38, 49, etc.).
+  - Games without multiplayer support are excluded from the list.
+  - Concurrent scanning with a semaphore (max 5 parallel requests) for speed.
+
+Install Detection
+  - Parses Steam's appmanifest_{appId}.acf files to read the "installdir" field.
+  - Determines the full game install path: steamapps/common/{installdir}.
+  - Shows install status per game (Installed, Fix Applied, Not Installed).
+  - Checks for .steamvault_fix_applied marker file to detect previous fixes.
+
+Fix Workflow
+  - User selects a game and clicks "Apply Fix".
+  - A browser tab opens to online-fix.me with the game name pre-searched.
+  - The app folder (where SteamVault.exe lives) opens in File Explorer.
+  - A FileSystemWatcher monitors the app folder for new .rar files.
+  - When a .rar is detected, the watcher waits for the file to stabilize
+    (size stops changing for 1 second, max 30 second timeout).
+  - The .rar is extracted using SharpCompress with the password "online-fix.me"
+    directly into the game's install directory.
+  - After successful extraction, a .steamvault_fix_applied marker is written.
+  - The .rar file is deleted after extraction (kept on permission errors for retry).
+
+Admin Rights Handling
+  - Before extraction, a write test creates/deletes a temporary file in the
+    game directory to check permissions.
+  - If the game folder is in a protected location (e.g., Program Files),
+    SteamVault detects the UnauthorizedAccessException and shows a
+    "Restart as Admin" button.
+  - Clicking restarts SteamVault.exe with the "runas" verb, triggering a UAC
+    elevation prompt. The current instance shuts down cleanly.
+
+Error Handling
+  - CryptographicException: wrong password (RAR not from online-fix.me).
+  - InvalidFormatException: corrupt or invalid RAR file.
+  - UnauthorizedAccessException: permission denied, offers admin restart.
+  - Generic exceptions with user-readable messages.
+
+Backend
+  - OnlineFixService handles appmanifest parsing, directory detection, RAR
+    monitoring with FileSystemWatcher, password-protected extraction via
+    SharpCompress, and cleanup.
+  - OnlineViewModel manages the scan state, detail view transitions, and
+    admin restart flow.
+  - OnlineGameEntry model with INotifyPropertyChanged for live status updates.
+
+3. THEME SYSTEM
+----------------------------------------------------------------
+Five built-in themes with live runtime switching, no restart required.
+
+Themes Included
+  - Dark: The default theme, deep charcoal with purple accents.
+  - AmoledBlack: True black backgrounds (#000000) for OLED power efficiency.
+  - MidnightBlue: Deep navy tones with blue highlights.
+  - SlateGray: Neutral gray palette with muted accents.
+  - EmeraldNight: Dark green accents on near-black backgrounds.
+
+How It Works
+  - Dark.xaml always loads first — it contains all UI styles (buttons, text blocks,
+    scroll bars, input fields, radio buttons, progress bars, tooltips, etc.).
+  - Each additional theme is a lightweight XAML overlay containing only color and
+    brush resource overrides (backgrounds, foregrounds, accent colors, borders).
+  - ThemeManager.ApplyTheme() rebuilds Application.Current.Resources from scratch
+    by merging Dark.xaml + the chosen theme overlay into a fresh ResourceDictionary.
+  - WPF propagates the new resources to all elements automatically.
+  - The selected theme is saved to AppSettings and restored on next launch via
+    ThemeManager.ApplySavedTheme().
+
+Settings Integration
+  - Settings tab has a dropdown listing all 5 themes by name.
+  - SettingsViewModel.ChangeThemeCommand updates AppSettings, saves, then calls
+    ThemeManager.ApplyTheme() on the UI thread.
+
+4. DLC SUPPORT
+----------------------------------------------------------------
+When downloading game configs, SteamVault now prompts whether to include DLCs.
+
+  - A MessageBox asks "Do you want to include all available DLCs?" (Yes/No).
+  - If Yes, DownloadService fetches the full depot list from Steam's API including
+    every DLC depot alongside the base game depots.
+  - Each DLC depot gets its own Lua configuration file and depot manifest downloaded.
+  - DLC content is written to the same Lua output directory as the base game.
+  - This eliminates the need for repeated manual downloads for games with large DLC
+    libraries.
+
+5. LUA BACKUP EXPORT
+----------------------------------------------------------------
+A new export option in the Settings tab that packs all Lua files into a ZIP archive.
+
+  - ExportService.ExportAllLuaFilesAsync() scans the configured Lua directory
+    recursively for all .lua files.
+  - Creates a ZIP archive named SteamVault_Backup_YYYYMMDD_HHmmss.zip using
+    System.IO.Compression.ZipArchive with optimal compression.
+  - Lua files are placed under a "lua/" folder inside the archive.
+  - Shows a FolderBrowserDialog (via Windows Forms interop) for destination selection.
+  - Remembers the last export directory in AppSettings for convenience.
+  - Reports total file count, manifest count, and archive size (auto-formatted
+    as B, KB, or MB) in the settings UI.
+  - ExportResult model provides Success, Error, FilePath, FileCount, ManifestCount,
+    TotalSizeBytes, and SizeFormatted properties.
+
+6. STEAMDB STATS INTEGRATION
+----------------------------------------------------------------
+Game detail views in both Dashboard and Discover tabs now show live data from SteamDB.
+
+  - Current player count: "X players now" or "X,N players now" (with thousands
+    separator for counts >= 1000).
+  - Metacritic score: numeric score pulled from SteamDB's /app/{appId} endpoint.
+  - Review percentage: "X% positive" from SteamDB's review summary.
+  - Stats are displayed alongside store data on the detail panel.
+  - DetailHasStats binds visibility so empty stats sections are hidden.
+  - SteamApiService.GetSteamDbStatsAsync() fetches and parses the data.
+
+7. FUZZY SEARCH
+----------------------------------------------------------------
+Search bars on the Dashboard and My Games tabs now use typo-tolerant matching.
+
+  - GameSearchService.CalculateFuzzyScore() computes a 0-100 match score using:
+    * Exact match: 100
+    * Starts-with: 95
+    * Contains as substring: 85
+    * Any word starts with query: 80
+    * Levenshtein distance on the most relevant substring: scaled 0-70 range.
+  - Levenshtein edit distance with O(n*m) dynamic programming implementation.
+  - Results are sorted by descending match score so the best match is always first.
+  - Works for both name-based searches and pure numeric App ID lookups.
+
+8. CDN MANIFEST DOWNLOADS
+----------------------------------------------------------------
+Depot manifests are now downloaded directly from Steam's CDN via SteamKit2.
+
+  - ManifestDownloadService connects to Steam's CDN anonymously (no login required).
+  - Connects via SteamClient, negotiates a CDN connection, fetches the CDN server
+    list, selects the best server by lowest weighted load, and downloads the
+    depot manifest binary.
+  - Download steps:
+    1. Connect to Steam and log on anonymously (15-second timeout).
+    2. Get CDN servers for the depot via GetServersForSteamPipe.
+    3. Get the manifest request code via GetManifestRequestCode.
+    4. Get a CDN auth token via GetCDNAuthToken.
+    5. Download the manifest via CDN Client.DownloadManifestAsync.
+    6. Save the manifest binary to depotcache/{depotId}_{manifestGid}.manifest.
+  - Old manifests for the same depot are cleaned up automatically — only the
+    latest version is kept on disk.
+  - Supports cancellation via CancellationToken.
+  - Batch download via DownloadAllManifestsAsync with progress reporting.
+  - Handles connection failures, server unavailability, and timeouts gracefully
+    with null returns.
+
+================================================================================
+TECHNICAL CHANGES
+================================================================================
+
+New Files
+  - DiscoverView.xaml / DiscoverView.xaml.cs — New tab UI and code-behind.
+  - DiscoverViewModel.cs — Browse, detail, and download logic for Discover.
+  - OnlineView.xaml / OnlineView.xaml.cs — New tab UI and code-behind.
+  - OnlineViewModel.cs — Scan, detail, fix workflow, and admin restart logic.
+  - OnlineGameEntry model — INotifyPropertyChanged model for Online tab rows.
+  - ThemeManager.cs — Runtime theme switching service.
+  - Themes/AmoledBlack.xaml — OLED-optimized color overlay.
+  - Themes/MidnightBlue.xaml — Navy color overlay.
+  - Themes/SlateGray.xaml — Neutral color overlay.
+  - Themes/EmeraldNight.xaml — Green accent color overlay.
+  - ExportService.cs — Lua file backup and ZIP creation.
+  - ExportResult model — Result container with size formatting.
+  - ManifestDownloadService.cs — SteamKit2 CDN manifest downloader.
+  - OnlineFixService.cs — online-fix.me integration, RAR monitoring and extraction.
+  - GameSearchService.cs — Fuzzy Levenshtein-based search engine.
+  - SearchResult model — Extended with MatchScore property.
+
+Modified Files
+  - MainWindow.xaml — Added v2.5.0 version string in title bar.
+  - SteamVault.csproj — Version bumped to 2.5.0, added SharpCompress and
+    SteamKit2 NuGet package references, added PublishSingleFile and
+    SelfContained settings for single-file executable builds.
+  - SettingsView.xaml / SettingsView.xaml.cs — Added theme dropdown, export
+    button, and export status display.
+  - SettingsViewModel.cs — Added theme switching, export orchestration,
+    database stats refresh, and status message management.
+  - SteamApiService.cs — Added GetSteamDbStatsAsync for live player count
+    and review data from SteamDB.
+  - MainViewModel.cs — Added Discover and Online tab navigation properties
+    and commands.
+  - DownloadService.cs — Added includeDlcs parameter to DownloadGameAsync
+    for DLC depot support.
+  - AppSettings.cs — Added LastExportDirectory and Theme properties.
+
+NuGet Dependencies Added
+  - SharpCompress 0.38.0 — RAR archive extraction with password support.
+  - SteamKit2 3.4.0 — Steam CDN client for manifest downloads.
+
+================================================================================
+BUILD
+================================================================================
+
+  - Published as a single-file, self-contained Windows executable.
+  - Runtime: .NET 9.0, target: win-x64.
+  - Includes all native OpenSteamTool DLLs (dwmapi.dll, OpenSteamTool.dll,
+    xinput1_4.dll) bundled inside the EXE and extracted at runtime.
+  - Includes depot key and app access token JSON databases.
+  - No external .NET runtime required.
+
+================================================================================

@@ -11,6 +11,8 @@ namespace SteamVault.Services;
 ///   addtoken(APPID, "ACCESS_TOKEN")          -- app access token (if available)
 ///   addappid(DEPOTID, 1, "DECRYPTION_KEY")   -- register depot decryption key under its own depot ID
 ///   setManifestid(DEPOTID, "MANIFEST_GID")   -- pin specific depot to a manifest (quoted GID)
+///   setAppTicket("HEX_TICKET")               -- OpenSteamTool v1.4.7+: AppTicket for SteamStub-only games
+///   setETicket("HEX_TICKET")                 -- OpenSteamTool v1.4.7+: ETicket hex string
 ///
 /// Decryption keys are registered against the DEPOT ID (not the parent app ID).
 /// Each depot gets its own key registration so OpenSteamTool can decrypt it.
@@ -26,7 +28,9 @@ public class LuaGeneratorService
         List<DepotLuaEntry> depots,
         string luaOutputPath,
         string? appAccessToken = null,
-        List<DlcLuaEntry>? dlcs = null)
+        List<DlcLuaEntry>? dlcs = null,
+        string? appTicket = null,
+        string? eTicket = null)
     {
         Directory.CreateDirectory(luaOutputPath);
 
@@ -44,6 +48,18 @@ public class LuaGeneratorService
         if (!string.IsNullOrWhiteSpace(appAccessToken))
         {
             sb.AppendLine($"addtoken({appId}, \"{appAccessToken}\")");
+        }
+
+        // 2b. AppTicket (OpenSteamTool v1.4.7+) — used for SteamStub-only games
+        if (!string.IsNullOrWhiteSpace(appTicket))
+        {
+            sb.AppendLine($"setAppTicket(\"{appTicket}\")");
+        }
+
+        // 2c. ETicket (OpenSteamTool v1.4.7+)
+        if (!string.IsNullOrWhiteSpace(eTicket))
+        {
+            sb.AppendLine($"setETicket(\"{eTicket}\")");
         }
 
         sb.AppendLine();

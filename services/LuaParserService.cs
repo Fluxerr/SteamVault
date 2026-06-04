@@ -21,6 +21,12 @@ public class LuaParserService
     // Matches: setManifestid(123456, "MANIFEST_GID")
     private static readonly Regex SetManifestIdRegex = new(@"setManifestid\((\d+),\s*""([^""]*)""\)", RegexOptions.Compiled);
 
+    // Matches: setAppTicket("HEX_TICKET_STRING") — OpenSteamTool v1.4.7+
+    private static readonly Regex SetAppTicketRegex = new(@"setAppTicket\(""([^""]+)""\)", RegexOptions.Compiled);
+
+    // Matches: setETicket("HEX_TICKET_STRING") — OpenSteamTool v1.4.7+
+    private static readonly Regex SetETicketRegex = new(@"setETicket\(""([^""]+)""\)", RegexOptions.Compiled);
+
     /// <summary>
     /// Scans the given folder for .lua files and returns a list of parsed LibraryEntry objects.
     /// </summary>
@@ -119,6 +125,16 @@ public class LuaParserService
                 depots[depotId] = new LibraryDepotInfo { DepotId = depotId };
             depots[depotId].ManifestId = manifestId;
         }
+
+        // Extract AppTicket (OpenSteamTool v1.4.7+)
+        var appTicketMatch = SetAppTicketRegex.Match(content);
+        if (appTicketMatch.Success)
+            entry.AppTicket = appTicketMatch.Groups[1].Value;
+
+        // Extract ETicket (OpenSteamTool v1.4.7+)
+        var eTicketMatch = SetETicketRegex.Match(content);
+        if (eTicketMatch.Success)
+            entry.ETicket = eTicketMatch.Groups[1].Value;
 
         // Include all depots found in the Lua file
         entry.Depots = new System.Collections.ObjectModel.ObservableCollection<LibraryDepotInfo>(

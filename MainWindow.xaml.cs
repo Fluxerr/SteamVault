@@ -93,4 +93,20 @@ public partial class MainWindow : Window
     {
         Close();
     }
+
+    private void Discord_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://discord.gg/kxpRNzqnsX",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to open Discord: {ex.Message}");
+        }
+    }
 }

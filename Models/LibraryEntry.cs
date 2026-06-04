@@ -47,6 +47,18 @@ public class LibraryEntry : INotifyPropertyChanged
     public ObservableCollection<LibraryDepotInfo> Depots { get; set; } = new();
     public string LuaFilePath { get; set; } = "";
 
+    /// <summary>
+    /// OpenSteamTool v1.4.7+ AppTicket hex string (for SteamStub-only games).
+    /// Parsed from setAppTicket() in Lua files.
+    /// </summary>
+    public string? AppTicket { get; set; }
+
+    /// <summary>
+    /// OpenSteamTool v1.4.7+ ETicket hex string.
+    /// Parsed from setETicket() in Lua files.
+    /// </summary>
+    public string? ETicket { get; set; }
+
     private bool _isInstalled;
     public bool IsInstalled
     {

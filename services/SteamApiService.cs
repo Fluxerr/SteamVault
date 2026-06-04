@@ -257,12 +257,17 @@ public class SteamApiService
                 }
 
                 string? manifestId = null;
+                string? decryptionKey = null;
                 var publicNode = depotData["manifests"]?["public"];
                 if (publicNode != null)
                 {
                     manifestId = (publicNode as JObject)?["gid"]?.Value<string>()
                               ?? (publicNode as JObject)?["value"]?.Value<string>()
                               ?? publicNode.Value<string>();
+
+                    // Also extract decryption key from the same manifest node (often present)
+                    decryptionKey = (publicNode as JObject)?["DecryptionKey"]?.Value<string>()
+                                 ?? (publicNode as JObject)?["decryptionkey"]?.Value<string>();
                 }
                 if (string.IsNullOrWhiteSpace(manifestId))
                 {
@@ -277,16 +282,28 @@ public class SteamApiService
                             else if (val is JObject valObj)
                             {
                                 manifestId = valObj["gid"]?.Value<string>() ?? valObj["value"]?.Value<string>();
+                                if (string.IsNullOrWhiteSpace(decryptionKey))
+                                    decryptionKey = valObj["DecryptionKey"]?.Value<string>()
+                                                 ?? valObj["decryptionkey"]?.Value<string>();
                                 if (!string.IsNullOrWhiteSpace(manifestId)) break;
                             }
                         }
                     }
                 }
 
+                // Also try top-level decryption key
+                if (string.IsNullOrWhiteSpace(decryptionKey))
+                {
+                    decryptionKey = depotData["DecryptionKey"]?.Value<string>()
+                                 ?? depotData["decryptionkey"]?.Value<string>()
+                                 ?? depotData["Key"]?.Value<string>();
+                }
+
                 list.Add(new DepotInfo
                 {
                     DepotId = depotId,
                     ManifestId = manifestId,
+                    DecryptionKey = decryptionKey,
                     SizeBytes = maxSize,
                     DlcAppId = dlcAppId
                 });

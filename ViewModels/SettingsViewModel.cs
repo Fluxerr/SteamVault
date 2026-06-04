@@ -20,16 +20,20 @@ public class SettingsViewModel : ViewModelBase
 
         SaveCommand = new RelayCommand(_ => SaveSettings());
         SyncDatabaseCommand = new RelayCommand(async _ => await SyncDatabaseAsync(), _ => !IsSyncing);
+        RescanKeysCommand = new RelayCommand(async _ => await RescanKeysAsync(), _ => !IsRescanning);
         ExportLuaCommand = new RelayCommand(async _ => await ExportLuaAsync(), _ => !IsExporting);
         ChangeThemeCommand = new RelayCommand(param => ChangeTheme(param as string));
+        JoinDiscordCommand = new RelayCommand(_ => OpenDiscord());
     }
 
     public AppSettings Settings => _settingsService.Settings;
 
     public ICommand SaveCommand { get; }
     public ICommand SyncDatabaseCommand { get; }
+    public ICommand RescanKeysCommand { get; }
     public ICommand ExportLuaCommand { get; }
     public ICommand ChangeThemeCommand { get; }
+    public ICommand JoinDiscordCommand { get; }
 
     // Auto-update toggle
     public bool AutoUpdateEnabled
@@ -72,6 +76,13 @@ public class SettingsViewModel : ViewModelBase
         set => SetProperty(ref _syncStatusMessage, value);
     }
 
+    private string _rescanStatusMessage = "";
+    public string RescanStatusMessage
+    {
+        get => _rescanStatusMessage;
+        set => SetProperty(ref _rescanStatusMessage, value);
+    }
+
     private string _exportStatus = "";
     public string ExportStatus
     {
@@ -86,6 +97,17 @@ public class SettingsViewModel : ViewModelBase
         set
         {
             SetProperty(ref _isSyncing, value);
+            CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    private bool _isRescanning;
+    public bool IsRescanning
+    {
+        get => _isRescanning;
+        set
+        {
+            SetProperty(ref _isRescanning, value);
             CommandManager.InvalidateRequerySuggested();
         }
     }
@@ -119,9 +141,36 @@ public class SettingsViewModel : ViewModelBase
         "Dark", "AmoledBlack", "MidnightBlue", "SlateGray", "EmeraldNight"
     };
 
-    public string DatabaseStats => _depotKeyService.IsLoaded
-        ? $"{_depotKeyService.DepotKeyCount:N0} depot keys, {_depotKeyService.AppTokenCount:N0} app tokens loaded."
-        : "Database not loaded yet.";
+    public string DatabaseStats
+    {
+        get
+        {
+            if (!_depotKeyService.IsLoaded)
+                return "Database not loaded yet.";
+
+            return $"{_depotKeyService.DepotKeyCount:N0} synced + {_depotKeyService.CachedKeyCount:N0} live + {_depotKeyService.ScrapedKeyCount:N0} community keys ({_depotKeyService.TotalKeyCount:N0} unique) | {_depotKeyService.AppTokenCount:N0} tokens";
+        }
+    }
+
+    public string KeySourceDetails
+    {
+        get
+        {
+            if (!_depotKeyService.IsLoaded)
+                return "Sources: Not loaded";
+
+            var parts = new List<string>();
+            if (_depotKeyService.LocalKeyCount > 0) parts.Add($"Local: {_depotKeyService.LocalKeyCount:N0}");
+            if (_depotKeyService.AppDataKeyCount > 0) parts.Add($"Synced: {_depotKeyService.AppDataKeyCount:N0}");
+            if (_depotKeyService.CachedKeyCount > 0) parts.Add($"Live API: {_depotKeyService.CachedKeyCount:N0}");
+            if (_depotKeyService.ScrapedKeyCount > 0) parts.Add($"Community: {_depotKeyService.ScrapedKeyCount:N0}");
+            if (_depotKeyService.DerivedKeyCount > 0) parts.Add($"Derived: {_depotKeyService.DerivedKeyCount:N0}");
+
+            return parts.Count > 0 ? $"Sources: {string.Join(" | ", parts)}" : "Sources: None loaded";
+        }
+    }
+
+    public string DiscordInviteUrl => "https://discord.gg/kxpRNzqnsX";
 
     private void SaveSettings()
     {
@@ -142,7 +191,7 @@ public class SettingsViewModel : ViewModelBase
     private async Task SyncDatabaseAsync()
     {
         IsSyncing = true;
-        SyncStatusMessage = "Initializing database synchronization...";
+        SyncStatusMessage = "Initializing multi-source database synchronization...";
 
         try
         {
@@ -157,6 +206,7 @@ public class SettingsViewModel : ViewModelBase
             if (success)
             {
                 OnPropertyChanged(nameof(DatabaseStats));
+                OnPropertyChanged(nameof(KeySourceDetails));
             }
         }
         catch (Exception ex)
@@ -166,6 +216,43 @@ public class SettingsViewModel : ViewModelBase
         finally
         {
             IsSyncing = false;
+        }
+    }
+
+    private async Task RescanKeysAsync()
+    {
+        IsRescanning = true;
+        RescanStatusMessage = "Refreshing community key mirrors...";
+
+        try
+        {
+            var success = await _depotKeyService.RefreshScrapedKeysAsync(msg =>
+            {
+                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    RescanStatusMessage = msg;
+                });
+            });
+
+            if (success)
+            {
+                OnPropertyChanged(nameof(DatabaseStats));
+                OnPropertyChanged(nameof(KeySourceDetails));
+            }
+        }
+        catch (Exception ex)
+        {
+            RescanStatusMessage = $"Rescan failed: {ex.Message}";
+        }
+        finally
+        {
+            IsRescanning = false;
+            // Clear after delay
+            Task.Delay(5000).ContinueWith(_ =>
+            {
+                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                    RescanStatusMessage = "");
+            });
         }
     }
 
@@ -233,5 +320,21 @@ public class SettingsViewModel : ViewModelBase
         {
             ThemeManager.ApplyTheme(themeName);
         });
+    }
+
+    private void OpenDiscord()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = DiscordInviteUrl,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to open Discord: {ex.Message}");
+        }
     }
 }

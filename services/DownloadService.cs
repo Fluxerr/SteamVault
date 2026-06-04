@@ -90,21 +90,12 @@ public class DownloadService
             if (!_depotKeyService.IsLoaded)
                 await _depotKeyService.LoadAsync();
 
-            var keysAttached = 0;
-            var manifestsResolved = 0;
-            var missingKeyDepotIds = new List<string>();
-            foreach (var depot in depots)
-            {
-                if (string.IsNullOrWhiteSpace(depot.ManifestId)) continue;
-                manifestsResolved++;
-                var key = await _depotKeyService.GetDepotKeyWithFallbackAsync(depot.DepotId, _steamApi, appIdFallback: appId);
-                if (!string.IsNullOrWhiteSpace(key))
-                { depot.DecryptionKey = key; keysAttached++; }
-                else
-                { missingKeyDepotIds.Add(depot.DepotId); }
-                if (!string.IsNullOrWhiteSpace(depot.ManifestId))
-                    manifestsResolved++;
-            }
+            // Use batch parallel key resolution for better coverage
+            _ = await _depotKeyService.ResolveMissingKeysBatchAsync(depots, _steamApi, appIdFallback: appId, onProgress: msg => onStatus?.Invoke(msg));
+
+            var keysAttached = depots.Count(d => !string.IsNullOrWhiteSpace(d.DecryptionKey));
+            var manifestsResolved = depots.Count(d => !string.IsNullOrWhiteSpace(d.ManifestId));
+            var missingKeyDepotIds = depots.Where(d => string.IsNullOrWhiteSpace(d.DecryptionKey) && !string.IsNullOrWhiteSpace(d.ManifestId)).Select(d => d.DepotId).ToList();
 
             game.AppAccessToken = _depotKeyService.GetAppAccessToken(appId);
             onProgress?.Invoke(70);
@@ -240,8 +231,8 @@ public class DownloadService
             onProgress?.Invoke(85);
 
             var luaEntries = usableDepots.Select(d => new DepotLuaEntry { DepotId = d.DepotId, DecryptionKey = d.DecryptionKey, ManifestId = d.ManifestId }).ToList();
-            LogLine($"Generating Lua — base depots: {luaEntries.Count}, DLC entries: {dlcEntries.Count}");
-            var luaFilePath = _luaGenerator.GenerateLuaFile(appId, game.Name, luaEntries, luaOutputPath, game.AppAccessToken, dlcEntries.Count > 0 ? dlcEntries : null);
+            LogLine($"Generating Lua — base depots: {luaEntries.Count}, DLC entries: {dlcEntries.Count}, AppTicket: {(game.AppTicket != null ? "yes" : "no")}, ETicket: {(game.ETicket != null ? "yes" : "no")}");
+            var luaFilePath = _luaGenerator.GenerateLuaFile(appId, game.Name, luaEntries, luaOutputPath, game.AppAccessToken, dlcEntries.Count > 0 ? dlcEntries : null, game.AppTicket, game.ETicket);
             onProgress?.Invoke(90);
 
             // Step 6: Manifest download (best-effort)

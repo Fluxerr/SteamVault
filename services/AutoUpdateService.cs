@@ -107,7 +107,7 @@ public class AutoUpdateService
                     if (needsUpdate)
                     {
                         OnStatusChanged?.Invoke($"Updating {entry.Name}...");
-                        var result = await _downloadService.DownloadGameAsync(entry.AppId);
+                        var result = await _downloadService.DownloadGameAsync(entry.AppId, includeDlcs: true);
 
                         if (result.Success)
                         {
@@ -196,7 +196,7 @@ public class AutoUpdateService
             // Check for new depots
             foreach (var latest in latestDepots)
             {
-                if (string.IsNullOrWhiteSpace(latest.ManifestId)) continue;
+                if (string.IsNullOrWhiteSpace(latest.ManifestId) || string.IsNullOrWhiteSpace(latest.DecryptionKey)) continue;
                 if (!entry.Depots.Any(d => d.DepotId == latest.DepotId))
                     return true;
             }

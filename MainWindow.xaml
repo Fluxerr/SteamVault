@@ -2,203 +2,273 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:SteamVault.Views"
-        Title="SteamVault" Height="780" Width="1160"
+        xmlns:viewmodels="clr-namespace:SteamVault.ViewModels"
+        Title="SteamVault" Height="860" Width="1280"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource WindowBackground}"
-        Foreground="{StaticResource Text}"
-        MinWidth="900" MinHeight="600">
-    
+        Icon="SteamVault.ico"
+        Background="{DynamicResource WindowBackground}"
+        Foreground="{DynamicResource Text}"
+        MinWidth="900" MinHeight="600"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        TextOptions.TextHintingMode="Fixed"
+        RenderOptions.ClearTypeHint="Enabled">
+
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" />
+        <WindowChrome CaptionHeight="42" ResizeBorderThickness="7" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="36" /> <!-- Custom Title Bar -->
+            <RowDefinition Height="42" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Title Bar -->
-        <Border Grid.Row="0" Background="{StaticResource SidebarBackground}">
+        <!-- TITLEBAR -->
+        <Border Grid.Row="0" Background="Transparent" WindowChrome.IsHitTestVisibleInChrome="False">
             <Grid>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0">
-                    <!-- Logo/Brand -->
-                    <TextBlock Text="⚡" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="STEAMVAULT" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"
-                               Foreground="{StaticResource MutedText}"/>
-                     <TextBlock Text="v2.5.0" FontSize="10" Foreground="{StaticResource DimText}" 
-                               VerticalAlignment="Center" Margin="8,2,0,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0">
+                    <TextBlock Text="SteamVault" FontFamily="pack://application:,,,/Fonts/#Inter, Segoe UI, sans-serif" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource Text}"/>
+                    <Border CornerRadius="6" Background="{DynamicResource SurfaceBase}" Padding="6,2" Margin="12,0,0,0">
+                        <TextBlock Text="v2.5.1" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace" FontSize="10" Foreground="{DynamicResource DimText}" VerticalAlignment="Center"/>
+                    </Border>
                 </StackPanel>
+
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Click="Minimize_Click" Style="{StaticResource TitleBarMinimizeButton}" />
-                    <Button x:Name="CloseButton" Click="Close_Click" Style="{StaticResource TitleBarCloseButton}" />
+                    <Button Click="Minimize_Click" Width="46" Height="32" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,0,4,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bg" CornerRadius="4" Background="Transparent">
+                                    <Path Data="M0,0 L10,0" Stroke="{DynamicResource DimText}" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4,0,0"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceHover}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    <Button x:Name="CloseButton" Click="Close_Click" Width="46" Height="32" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,0,6,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bg" CornerRadius="4" Background="Transparent">
+                                    <Path Data="M0,0 L8,8 M8,0 L0,8" Stroke="{DynamicResource DimText}" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#33F87171"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
+        <!-- MAIN LAYOUT -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240" /> <!-- Sidebar -->
+                <ColumnDefinition x:Name="SidebarColumn" Width="250" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Sidebar -->
-            <Border Grid.Column="0" x:Name="SidebarPanel">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#0E0E18" Offset="0"/>
-                        <GradientStop Color="#0A0A14" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
+            <!-- SIDEBAR -->
+            <Border x:Name="SidebarPanel" Grid.Column="0" Background="{DynamicResource SidebarBackground}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Nav Items -->
-                    <StackPanel Grid.Row="0" Margin="0,20,0,0">
-                        <TextBlock Text="MENU" FontSize="10" FontWeight="Bold" Foreground="{StaticResource DimText}"
-                                   Margin="28,0,0,12"/>
-                        <RadioButton Content="🏠  Dashboard" Command="{Binding NavigateDashboardCommand}" 
-                                     IsChecked="{Binding IsDashboardActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
-                        <RadioButton Content="🔍  Discover" Command="{Binding NavigateDiscoverCommand}" 
-                                     IsChecked="{Binding IsDiscoverActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
-                        <RadioButton Content="🎮  My Games" Command="{Binding NavigateMyGamesCommand}" 
-                                     IsChecked="{Binding IsMyGamesActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
-                        <RadioButton Content="🌐  Online" Command="{Binding NavigateOnlineCommand}" 
-                                     IsChecked="{Binding IsOnlineActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
-                        <RadioButton Content="⚙  Settings" Command="{Binding NavigateSettingsCommand}" 
-                                     IsChecked="{Binding IsSettingsActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{StaticResource SidebarNavButton}" />
+                    <StackPanel Grid.Row="0" Margin="12,16,12,0">
+                        <TextBlock Text="WORKSPACE" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource DimText}" Margin="16,0,0,12"/>
+                        <RadioButton Command="{Binding NavigateDashboardCommand}" IsChecked="{Binding IsDashboardActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{DynamicResource SidebarNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE80F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Command="{Binding NavigateDiscoverCommand}" IsChecked="{Binding IsDiscoverActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{DynamicResource SidebarNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Discover" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Command="{Binding NavigateMyGamesCommand}" IsChecked="{Binding IsMyGamesActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{DynamicResource SidebarNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE838;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Library" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Command="{Binding NavigateOnlineCommand}" IsChecked="{Binding IsOnlineActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{DynamicResource SidebarNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE774;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Online Fixes" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Command="{Binding NavigateSettingsCommand}" IsChecked="{Binding IsSettingsActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{DynamicResource SidebarNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
                     </StackPanel>
 
-                    <!-- Bottom Stats -->
-                    <Border Grid.Row="1" Margin="16,0,16,20" Padding="16,14" CornerRadius="12"
-                            Background="#12121E">
-                        <StackPanel>
-                            <TextBlock x:Name="GameCountText" FontSize="12" 
-                                       FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding AutoUpdateStatus}" FontSize="11" 
-                                       Foreground="{StaticResource DimText}"/>
+                    <!-- LOCAL VAULT FOOTER -->
+                    <StackPanel Grid.Row="1" Margin="24,0,24,4">
+                        <TextBlock Text="LOCAL VAULT" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource DimText}"/>
+                    </StackPanel>
+
+                    <!-- GAME COUNT + ONLINE STATUS -->
+                    <Grid Grid.Row="2" Margin="24,0,24,32">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding GameCount}" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace" FontSize="13" Foreground="{DynamicResource Text}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Games" FontSize="13" Foreground="{DynamicResource MutedText}" VerticalAlignment="Center"/>
                         </StackPanel>
-                    </Border>
+
+                        <Border Grid.Column="1" VerticalAlignment="Center"
+                                Background="#3334D399" CornerRadius="6"
+                                Padding="8,5">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Style.Triggers>
+                                                <EventTrigger RoutedEvent="Loaded">
+                                                    <BeginStoryboard>
+                                                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.35" Duration="0:0:1.6">
+                                                                <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="Online" Foreground="{DynamicResource SuccessBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Border>
 
-            <!-- Accent line between sidebar and content -->
-            <Border Grid.Column="0" HorizontalAlignment="Right" Width="1">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#1E1E30" Offset="0"/>
-                        <GradientStop Color="#2A1A4E" Offset="0.5"/>
-                        <GradientStop Color="#1E1E30" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
+            <!-- CONTENT AREA -->
+            <Grid Grid.Column="1">
+                <ContentControl x:Name="MainContentHost" Content="{Binding}" Opacity="1">
+                    <ContentControl.RenderTransform>
+                        <TranslateTransform X="0" Y="0"/>
+                    </ContentControl.RenderTransform>
+                    <ContentControl.Resources>
+                        <DataTemplate DataType="{x:Type viewmodels:InstallationViewModel}">
+                            <views:InstallationView />
+                        </DataTemplate>
+                        <DataTemplate DataType="{x:Type viewmodels:MainViewModel}">
+                            <ContentControl Content="{Binding CurrentView, NotifyOnTargetUpdated=True}">
+                                <ContentControl.Style>
+                                    <Style TargetType="ContentControl">
+                                        <Style.Triggers>
+                                            <EventTrigger RoutedEvent="Binding.TargetUpdated">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut"/>
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,20,0,0" To="0,0,0,0" Duration="0:0:0.35">
+                                                            <ThicknessAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut"/>
+                                                            </ThicknessAnimation.EasingFunction>
+                                                        </ThicknessAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ContentControl.Style>
+                                <ContentControl.Resources>
+                                    <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
+                                        <views:DashboardView />
+                                    </DataTemplate>
+                                    <DataTemplate DataType="{x:Type viewmodels:MyGamesViewModel}">
+                                        <views:MyGamesView />
+                                    </DataTemplate>
+                                    <DataTemplate DataType="{x:Type viewmodels:SettingsViewModel}">
+                                        <views:SettingsView />
+                                    </DataTemplate>
+                                    <DataTemplate DataType="{x:Type viewmodels:DiscoverViewModel}">
+                                        <views:DiscoverView />
+                                    </DataTemplate>
+                                    <DataTemplate DataType="{x:Type viewmodels:OnlineViewModel}">
+                                        <views:OnlineView />
+                                    </DataTemplate>
+                                </ContentControl.Resources>
+                            </ContentControl>
+                        </DataTemplate>
+                    </ContentControl.Resources>
+                </ContentControl>
+            </Grid>
 
-            <!-- Discord Button (bottom-right, always visible) -->
+            <!-- DISCORD FAB -->
             <Button x:Name="DiscordButton" Click="Discord_Click"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                    Width="48" Height="48" Margin="0,0,20,20"
-                    Panel.ZIndex="100" Cursor="Hand"
-                    ToolTip="Join our Discord for game requests &amp; support">
+                    Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Margin="0,0,24,24" Panel.ZIndex="100" Cursor="Hand"
+                    ToolTip="Join Discord for requests and support"
+                    Height="40">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="DiscordCircle" Background="#5865F2" CornerRadius="24" 
-                                BorderBrush="#5865F2" BorderThickness="0"
-                                RenderTransformOrigin="0.5,0.5">
+                        <Border x:Name="DiscordPill" Background="#5865F2" CornerRadius="20" Padding="12,0" RenderTransformOrigin="0.5,0.5">
                             <Border.RenderTransform>
                                 <ScaleTransform ScaleX="1" ScaleY="1"/>
                             </Border.RenderTransform>
-                            <Image Source="Discord.png" Width="26" Height="26" 
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   Stretch="Uniform"
-                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="Discord.png" Width="20" Height="20" VerticalAlignment="Center" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                <TextBlock x:Name="DiscordText" Text="Discord" Foreground="White" FontWeight="SemiBold" FontSize="13" Margin="8,0,4,0" VerticalAlignment="Center" Width="0" Opacity="0" ClipToBounds="True"/>
+                            </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="DiscordCircle" Property="Background" Value="#4752C4"/>
+                                <Setter TargetName="DiscordPill" Property="Background" Value="#4752C4"/>
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="DiscordCircle" 
-                                                           Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                           To="1.1" Duration="0:0:0.15">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
+                                            <DoubleAnimation Storyboard.TargetName="DiscordText" Storyboard.TargetProperty="Width" To="54" Duration="0:0:0.15">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="DiscordCircle" 
-                                                           Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                           To="1.1" Duration="0:0:0.15">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="DiscordText" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15" BeginTime="0:0:0.05"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="DiscordCircle" 
-                                                           Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                           To="1" Duration="0:0:0.15">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
+                                            <DoubleAnimation Storyboard.TargetName="DiscordText" Storyboard.TargetProperty="Width" To="0" Duration="0:0:0.15">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="DiscordCircle" 
-                                                           Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                           To="1" Duration="0:0:0.15">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="DiscordText" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.1"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="DiscordCircle" Property="Background" Value="#3C45A5"/>
+                                <Setter TargetName="DiscordPill" Property="Background" Value="#3C45A5"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Button.Template>
             </Button>
-
-            <!-- Main Content Area with fade transition -->
-            <ContentControl Grid.Column="1" x:Name="MainContentHost" Content="{Binding}" Opacity="1">
-                <ContentControl.RenderTransform>
-                    <TranslateTransform X="0"/>
-                </ContentControl.RenderTransform>
-                <ContentControl.Resources>
-                    <DataTemplate DataType="{x:Type viewmodels:InstallationViewModel}" xmlns:viewmodels="clr-namespace:SteamVault.ViewModels">
-                        <views:InstallationView />
-                    </DataTemplate>
-                    <DataTemplate DataType="{x:Type viewmodels:MainViewModel}" xmlns:viewmodels="clr-namespace:SteamVault.ViewModels">
-                        <ContentControl Content="{Binding CurrentView}">
-                            <ContentControl.Resources>
-                                <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
-                                    <views:DashboardView />
-                                </DataTemplate>
-                                <DataTemplate DataType="{x:Type viewmodels:MyGamesViewModel}">
-                                    <views:MyGamesView />
-                                </DataTemplate>
-                                <DataTemplate DataType="{x:Type viewmodels:SettingsViewModel}">
-                                    <views:SettingsView />
-                                </DataTemplate>
-                                <DataTemplate DataType="{x:Type viewmodels:DiscoverViewModel}">
-                                    <views:DiscoverView />
-                                </DataTemplate>
-                                <DataTemplate DataType="{x:Type viewmodels:OnlineViewModel}">
-                                    <views:OnlineView />
-                                </DataTemplate>
-                            </ContentControl.Resources>
-                        </ContentControl>
-                    </DataTemplate>
-                </ContentControl.Resources>
-            </ContentControl>
         </Grid>
     </Grid>
 </Window>

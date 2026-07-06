@@ -10,291 +10,292 @@
              d:DesignHeight="680" d:DesignWidth="860">
     <UserControl.Resources>
         <converters:InvertibleBoolToVisibilityConverter x:Key="BoolToVis" />
-        <converters:StringEqualityToVisibilityConverter x:Key="StringEqualsToVis" />
-
-        <Style x:Key="UpToDateButton" TargetType="Button">
-            <Setter Property="Background" Value="#102A1A" />
-            <Setter Property="Foreground" Value="#10B981" />
-            <Setter Property="Padding" Value="14,8" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BorderBrush" Value="#0A5A30"/>
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="IsEnabled" Value="False" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </UserControl.Resources>
-
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="40,32,40,40">
-            <!-- ═══ GAME GRID (default) ═══ -->
-            <Grid Visibility="{Binding ShowGameGrid, Converter={StaticResource BoolToVis}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                    <TextBlock Text="My Games" Style="{StaticResource TitleText}"/>
-                    <TextBlock Text="Scan and manage your local Lua vault. Batch check or update manifests with a single click." 
-                               Style="{StaticResource SubtitleText}" Margin="0,-12,0,12"/>
-                </StackPanel>
-
-                <Grid Grid.Row="1" Margin="0,0,0,24">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
-                             Height="42" FontSize="14" VerticalContentAlignment="Center"
-                             Tag="🔍  Filter local games by name or App ID..."/>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
-                        <Button Content="🔄  Refresh" Command="{Binding RefreshCommand}"
-                                Style="{StaticResource GhostButton}" Width="120" Height="42" Margin="0,0,8,0"/>
-                        <Button Content="⚡  Update All" Command="{Binding UpdateAllCommand}" Width="140" Height="42"/>
-                    </StackPanel>
-                </Grid>
-
-                <Grid Grid.Row="2">
-                    <ItemsControl ItemsSource="{Binding Games}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Columns="2" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border x:Name="GameCard" Margin="8" 
-                                        Background="{StaticResource CardBackground}" 
-                                        CornerRadius="14" Padding="0"
-                                        BorderBrush="#1E1E30" BorderThickness="1"
-                                        Cursor="Hand"
-                                        MouseLeftButtonDown="GameCard_Click">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="130"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Border Grid.Row="0" CornerRadius="13,13,0,0" ClipToBounds="True">
-                                            <Grid>
-                                                <Image Source="{Binding HeaderImageUrl}" 
-                                                       Stretch="UniformToFill" HorizontalAlignment="Center"
-                                                       Style="{StaticResource FadeInImage}"/>
-                                                <Border>
-                                                    <Border.Background>
-                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                            <GradientStop Color="Transparent" Offset="0.5"/>
-                                                            <GradientStop Color="#CC0A0A14" Offset="1"/>
-                                                        </LinearGradientBrush>
-                                                    </Border.Background>
-                                                </Border>
-                                            </Grid>
-                                        </Border>
-                                        <StackPanel Grid.Row="1" Margin="18,14,18,18">
-                                            <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="Bold"
-                                                       TextTrimming="CharacterEllipsis" Margin="0,0,0,8"/>
-                                            <Grid Margin="0,0,0,8">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Border Background="#1A1A2E" CornerRadius="6" Padding="8,3">
-                                                    <TextBlock Text="{Binding AppId, StringFormat='App ID {0}'}" 
-                                                               FontSize="11" Foreground="{StaticResource MutedText}"/>
-                                                </Border>
-                                                <!-- Install Status -->
-                                                <Border Grid.Column="2" CornerRadius="6" Padding="10,3" Margin="0,0,0,0">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="#2A1A0A"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsInstalled}" Value="True">
-                                                                    <Setter Property="Background" Value="#102A1A"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                    <TextBlock Text="{Binding InstallStatusText}" FontSize="11" FontWeight="Bold"
-                                                               Foreground="{StaticResource MutedText}"/>
-                                                </Border>
-                                            </Grid>
-                                            <!-- Status + Progress -->
-                                            <Grid Margin="0,0,0,8">
-                                                <Border Grid.Column="0" CornerRadius="6" Padding="8,3"
-                                                        HorizontalAlignment="Left"
-                                                        Background="{Binding StatusBrush, FallbackValue=#1A1A2E}">
-                                                    <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="Bold" Foreground="White"/>
-                                                </Border>
-                                            </Grid>
-                                            <ProgressBar Value="{Binding UpdateProgress}" Maximum="100" Height="5" Margin="0,0,0,8"
-                                                         Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVis}}"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                                <DataTemplate.Triggers>
-                                    <Trigger SourceName="GameCard" Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="GameCard" Property="BorderBrush" Value="{StaticResource PrimaryAccent}"/>
-                                        <Setter TargetName="GameCard" Property="Background" Value="{StaticResource CardHover}"/>
-                                    </Trigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Grid>
-
-                <Border Grid.Row="3" Background="{StaticResource CardBackground}" CornerRadius="12" 
-                        Padding="16,14" Margin="0,16,0,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                        Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Ellipse Style="{StaticResource PulsingDot}" VerticalAlignment="Center" Margin="0,0,10,0" Visibility="Visible"/>
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource MutedText}" FontSize="13" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
-
-            <!-- ═══ GAME DETAIL VIEW ═══ -->
-            <Grid Visibility="{Binding ShowGameDetail, Converter={StaticResource BoolToVis}}">
-                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="28"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="280"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Border Grid.Column="0" CornerRadius="10" ClipToBounds="True" VerticalAlignment="Top">
-                            <Image Source="{Binding SelectedGame.HeaderImageUrl}" Stretch="Uniform" Width="280"
-                                   Style="{StaticResource FadeInImage}"/>
-                        </Border>
-
-                        <StackPanel Grid.Column="1" Margin="28,0,0,0">
-                            <Button Content="←  Back to Library" Command="{Binding BackToGridCommand}"
-                                    Style="{StaticResource GhostButton}" HorizontalAlignment="Left"
-                                    Padding="14,8" Margin="0,0,0,16" FontSize="12"/>
-
-                            <TextBlock Text="{Binding SelectedGame.Name}" FontSize="24" FontWeight="Bold" 
-                                       TextWrapping="Wrap" Margin="0,0,0,10"/>
-
-                            <!-- Badges -->
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
-                                    <TextBlock Text="{Binding SelectedGame.AppId, StringFormat='ID: {0}'}" 
-                                               FontSize="12" Foreground="{StaticResource MutedText}"/>
-                                </Border>
-                                <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
-                                    <TextBlock Text="{Binding SelectedGame.Type}" FontSize="12" Foreground="{StaticResource MutedText}"/>
-                                </Border>
-                                <Border Background="#1E1E30" CornerRadius="6" Padding="10,4">
-                                    <TextBlock Text="{Binding SelectedGame.ReleaseDate}" FontSize="12" Foreground="{StaticResource MutedText}"/>
-                                </Border>
-                            </StackPanel>
-
-                            <!-- Install Status -->
-                            <Border CornerRadius="6" Padding="10,5" Margin="0,0,0,10">
+        
+        <DataTemplate x:Key="GameCardTemplate">
+            <Border x:Name="LibraryCard" Margin="6" Background="{DynamicResource SurfaceBase}" CornerRadius="12" ClipToBounds="True" Cursor="Hand" MouseLeftButtonDown="GameCard_Click" RenderTransformOrigin="0.5,0.5" TextOptions.TextFormattingMode="Ideal" TextOptions.TextHintingMode="Animated">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Border.RenderTransform>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Image container with 460:215 aspect ratio -->
+                    <Border Grid.Row="0" CornerRadius="12,12,0,0" ClipToBounds="True">
+                        <Grid>
+                            <Border Background="{DynamicResource SurfaceRaised}" Height="120"/>
+                            <Image Source="{Binding HeaderImageUrl}" Stretch="UniformToFill" Height="120" Style="{DynamicResource FadeInImage}"/>
+                            
+                            <!-- Gradient scrim -->
+                            <Border VerticalAlignment="Bottom" Height="50">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#00000000" Offset="0"/>
+                                        <GradientStop Color="#CC1A1A1F" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            
+                            <!-- Install Status Indicator -->
+                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,10" Width="10" Height="10" CornerRadius="5">
                                 <Border.Style>
                                     <Style TargetType="Border">
-                                        <Setter Property="Background" Value="#2A1A0A"/>
-                                        <Setter Property="BorderBrush" Value="#8B5A00"/>
-                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedGame.IsInstalled}" Value="True">
-                                                <Setter Property="Background" Value="#102A1A"/>
-                                                <Setter Property="BorderBrush" Value="#0A5A30"/>
+                                            <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <TextBlock Text="{Binding SelectedGame.InstallStatusText}" FontWeight="SemiBold" FontSize="13">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#F59E0B"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedGame.IsInstalled}" Value="True">
-                                                    <Setter Property="Foreground" Value="#10B981"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
                             </Border>
+                        </Grid>
+                    </Border>
 
-                            <!-- Description -->
-                            <TextBlock Text="{Binding SelectedGame.Description}" TextWrapping="Wrap" FontSize="13" 
-                                       Foreground="{StaticResource MutedText}" Margin="0,0,0,12"/>
+                    <StackPanel Grid.Row="1" Margin="14,10,14,14">
+                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource DimText}" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <Trigger SourceName="LibraryCard" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="LibraryCard" Property="Background" Value="{DynamicResource SurfaceRaised}"/>
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="LibraryCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.02" Duration="0:0:0.15"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="LibraryCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.02" Duration="0:0:0.15"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="LibraryCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
+                                <DoubleAnimation Storyboard.TargetName="LibraryCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </UserControl.Resources>
 
-                            <!-- Status -->
-                            <TextBlock Text="{Binding DetailStatusMessage}" TextWrapping="Wrap" FontSize="12" 
-                                       Foreground="{StaticResource DimText}" Margin="0,0,0,16"/>
+    <Grid>
+        <!-- Top Scanning Bar -->
+        <Border Height="3" Background="{DynamicResource PrimaryAccent}" VerticalAlignment="Top" Panel.ZIndex="10"
+                Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.5" To="1" AutoReverse="True" Duration="0:0:0.8"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
 
-                            <!-- Action Buttons -->
-                            <WrapPanel>
-                                <!-- Launch (only if installed) -->
-                                <Button Content="▶  Launch Game" 
-                                        Command="{Binding LaunchGameCommand}"
-                                        CommandParameter="{Binding SelectedGame}"
-                                        HorizontalAlignment="Left" Padding="18,10" Margin="0,0,12,12"
-                                        Visibility="{Binding SelectedGame.IsInstalled, Converter={StaticResource BoolToVis}}"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid Margin="48,40,48,40">
+                <!-- ═══ LIBRARY GRID ═══ -->
+                <Grid Visibility="{Binding ShowGameDetail, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                                <!-- Open Installed Folder (only if installed) -->
-                                <Button Content="📁  Game Folder" 
-                                        Command="{Binding OpenInstallFolderCommand}"
-                                        CommandParameter="{Binding SelectedGame}"
-                                        Style="{StaticResource GhostButton}"
-                                        HorizontalAlignment="Left" Padding="16,10" Margin="0,0,12,12"
-                                        Visibility="{Binding SelectedGame.IsInstalled, Converter={StaticResource BoolToVis}}"/>
+                    <!-- Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Library" Style="{DynamicResource TitleText}"/>
+                            <TextBlock Text="Your locally managed SteamVault configurations and installed games." Style="{DynamicResource SubtitleText}"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                            <TextBox Width="200" Height="40" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                                     Tag="Filter library..." Margin="0,0,12,0"/>
+                            <Button Command="{Binding RefreshCommand}" Style="{DynamicResource GhostButton}" Padding="12,8">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
 
-                                <!-- Open Lua Folder -->
-                                <Button Content="📄  Lua Folder" 
-                                        Command="{Binding OpenLuaFolderCommand}"
-                                        CommandParameter="{Binding SelectedGame}"
-                                        Style="{StaticResource GhostButton}"
-                                        HorizontalAlignment="Left" Padding="16,10" Margin="0,0,12,12"/>
+                    <!-- Status message -->
+                    <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" Foreground="{DynamicResource DimText}" FontSize="13" Margin="0,0,0,24"/>
 
-                                <!-- Delete -->
-                                <Button Content="🗑  Delete Game" 
-                                        Command="{Binding DeleteGameCommand}"
-                                        CommandParameter="{Binding SelectedGame}"
-                                        Background="#2A0D0D" Foreground="#EF4444"
-                                        BorderBrush="#4A1A1A" BorderThickness="1"
-                                        HorizontalAlignment="Left" Padding="16,10" Margin="0,0,12,12"
-                                        FontWeight="SemiBold" FontSize="13" Cursor="Hand">
+                    <!-- Empty State -->
+                    <StackPanel Grid.Row="2" Visibility="{Binding HasNoGames, Converter={StaticResource BoolToVis}}" 
+                                HorizontalAlignment="Center" Margin="0,80,0,0">
+                        <TextBlock Text="&#xE814;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="48" 
+                                   Foreground="{DynamicResource SurfaceHover}" HorizontalAlignment="Center" Margin="0,0,0,24"/>
+                        <TextBlock Text="Your vault is empty" FontSize="18" FontWeight="Medium" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBlock Text="Games you configure via the Dashboard will appear here." Foreground="{DynamicResource MutedText}" FontSize="14" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Grid -->
+                    <ItemsControl Grid.Row="2" ItemsSource="{Binding Games}" ItemTemplate="{StaticResource GameCardTemplate}"
+                                  Visibility="{Binding HasNoGames, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Grid>
+
+                <!-- ═══ GAME DETAIL VIEW ═══ -->
+                <Border Visibility="{Binding ShowGameDetail, Converter={StaticResource BoolToVis}}" Padding="0" ClipToBounds="True">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource SurfaceCard}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ShowGameDetail}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,30,0,0" To="0" Duration="0:0:0.35">
+                                                    <ThicknessAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ThicknessAnimation.EasingFunction>
+                                                </ThicknessAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="220"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header Banner -->
+                        <Grid Grid.Row="0">
+                            <Border Background="{DynamicResource SurfaceRaised}"/>
+                            <Image Source="{Binding SelectedGame.HeaderImageUrl}" Stretch="UniformToFill" Style="{DynamicResource FadeInImage}"/>
+                            <Border>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#33000000" Offset="0"/>
+                                        <GradientStop Color="#F21A1A1F" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            <StackPanel VerticalAlignment="Bottom" Margin="40,0,40,24">
+                                <Button Command="{Binding BackToGridCommand}" Style="{DynamicResource GhostButton}" HorizontalAlignment="Left" Padding="8,4" Margin="-8,0,0,16" BorderThickness="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE72B;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Back to Library" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Text="{Binding SelectedGame.Name}" FontSize="28" FontWeight="Bold" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Content Area -->
+                        <Grid Grid.Row="1" Margin="40,24,40,40">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="260"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Left Info -->
+                            <StackPanel Grid.Column="0" Margin="0,0,40,0">
+                                <WrapPanel Margin="0,0,0,20">
+                                    <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                        <TextBlock Text="{Binding SelectedGame.AppId, StringFormat='ID: {0}'}" Style="{DynamicResource MonoText}" FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                    </Border>
+                                    <!-- Install Status Pill -->
+                                    <Border CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#33FBBF24"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedGame.IsInstalled}" Value="True">
+                                                        <Setter Property="Background" Value="#3334D399"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding SelectedGame.InstallStatusText}" FontSize="12" FontWeight="Medium">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedGame.IsInstalled}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                    <!-- Update Status Pill -->
+                                    <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                        <TextBlock Text="{Binding SelectedGame.Status}" FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                    </Border>
+                                </WrapPanel>
+
+                                <TextBlock Text="{Binding SelectedGame.Description}" TextWrapping="Wrap" FontSize="14" LineHeight="22" Foreground="{DynamicResource MutedText}" Margin="0,0,0,20" MaxHeight="88" TextTrimming="CharacterEllipsis"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="Type: " Foreground="{DynamicResource DimText}" FontSize="13"/>
+                                    <TextBlock Text="{Binding SelectedGame.Type}" FontSize="13" Foreground="{DynamicResource MutedText}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="Released: " Foreground="{DynamicResource DimText}" FontSize="13"/>
+                                    <TextBlock Text="{Binding SelectedGame.ReleaseDate}" FontSize="13" Foreground="{DynamicResource MutedText}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="Depots: " Foreground="{DynamicResource DimText}" FontSize="13"/>
+                                    <TextBlock Text="{Binding SelectedGame.Depots.Count}" Style="{DynamicResource MonoText}" FontSize="13" Foreground="{DynamicResource MutedText}"/>
+                                </StackPanel>
+
+                                <TextBlock Text="{Binding DetailStatusMessage}" Foreground="{DynamicResource DimText}" FontSize="12" Margin="0,16,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <!-- Right Actions -->
+                            <StackPanel Grid.Column="1">
+                                <Button Content="Launch Game" Command="{Binding LaunchGameCommand}" CommandParameter="{Binding SelectedGame}" Margin="0,0,0,12"/>
+                                <Button Content="Update Config" Command="{Binding UpdateGameCommand}" CommandParameter="{Binding SelectedGame}" Style="{DynamicResource GhostButton}" Margin="0,0,0,12"/>
+                                <Button Content="Open Install Folder" Command="{Binding OpenInstallFolderCommand}" CommandParameter="{Binding SelectedGame}" Style="{DynamicResource GhostButton}" Margin="0,0,0,12"/>
+                                <Button Content="Open Lua Folder" Command="{Binding OpenLuaFolderCommand}" CommandParameter="{Binding SelectedGame}" Style="{DynamicResource GhostButton}" Margin="0,0,0,24"/>
+                                
+                                <Button Command="{Binding DeleteGameCommand}" CommandParameter="{Binding SelectedGame}" Background="Transparent" Foreground="{DynamicResource ErrorBrush}" BorderThickness="0" Padding="0" HorizontalAlignment="Right" FontSize="13" Cursor="Hand">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border x:Name="DeleteBorder" Background="{TemplateBinding Background}" 
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                                    CornerRadius="10" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
+                                            <TextBlock x:Name="DelText" Text="Delete Config" TextDecorations="Underline" Cursor="Hand" Foreground="{DynamicResource ErrorBrush}" Opacity="0.7"/>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="DeleteBorder" Property="Background" Value="#3A1414"/>
-                                                    <Setter TargetName="DeleteBorder" Property="BorderBrush" Value="#EF4444"/>
+                                                    <Setter TargetName="DelText" Property="Opacity" Value="1"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Button.Template>
                                 </Button>
-                            </WrapPanel>
-                        </StackPanel>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
                 </Border>
             </Grid>
-        </Grid>
-    </ScrollViewer>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

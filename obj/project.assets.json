@@ -8,6 +8,26 @@
           "build/Microsoft.NET.ILLink.Tasks.props": {}
         }
       },
+      "Microsoft.Web.WebView2/1.0.3967.48": {
+        "type": "package",
+        "build": {
+          "buildTransitive/Microsoft.Web.WebView2.targets": {}
+        },
+        "runtimeTargets": {
+          "runtimes/win-arm64/native/WebView2Loader.dll": {
+            "assetType": "native",
+            "rid": "win-arm64"
+          },
+          "runtimes/win-x64/native/WebView2Loader.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x86/native/WebView2Loader.dll": {
+            "assetType": "native",
+            "rid": "win-x86"
+          }
+        }
+      },
       "Newtonsoft.Json/13.0.4": {
         "type": "package",
         "compile": {
@@ -115,6 +135,15 @@
         "type": "package",
         "build": {
           "build/Microsoft.NET.ILLink.Tasks.props": {}
+        }
+      },
+      "Microsoft.Web.WebView2/1.0.3967.48": {
+        "type": "package",
+        "native": {
+          "runtimes/win-x64/native/WebView2Loader.dll": {}
+        },
+        "build": {
+          "buildTransitive/Microsoft.Web.WebView2.targets": {}
         }
       },
       "Newtonsoft.Json/13.0.4": {
@@ -270,6 +299,103 @@
         "tools/net9.0/illink.dll",
         "tools/net9.0/illink.runtimeconfig.json",
         "useSharedDesignerContext.txt"
+      ]
+    },
+    "Microsoft.Web.WebView2/1.0.3967.48": {
+      "sha512": "b7dZ5kZ9bfU5Yo11M8feCOoiyalXCN+2Gsw674RBDBmQ2dJV5EOXb8/ivN2LuLJ+VO2V7FmK6l6LsyfEnG1lXw==",
+      "type": "package",
+      "path": "microsoft.web.webview2/1.0.3967.48",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.txt",
+        "NOTICE.txt",
+        "WebView2.idl",
+        "WebView2.tlb",
+        "build/Common.targets",
+        "build/Microsoft.Web.WebView2.targets",
+        "build/WebView2Rules.Project.xml",
+        "build/native/Microsoft.Web.WebView2.targets",
+        "build/native/arm64/WebView2Loader.dll",
+        "build/native/arm64/WebView2Loader.dll.lib",
+        "build/native/arm64/WebView2LoaderStatic.lib",
+        "build/native/include-winrt/WebView2Interop.h",
+        "build/native/include-winrt/WebView2Interop.idl",
+        "build/native/include-winrt/WebView2Interop.tlb",
+        "build/native/include/WebView2.h",
+        "build/native/include/WebView2EnvironmentOptions.h",
+        "build/native/x64/WebView2Loader.dll",
+        "build/native/x64/WebView2Loader.dll.lib",
+        "build/native/x64/WebView2LoaderStatic.lib",
+        "build/native/x86/WebView2Loader.dll",
+        "build/native/x86/WebView2Loader.dll.lib",
+        "build/native/x86/WebView2LoaderStatic.lib",
+        "build/wv2winrt.targets",
+        "buildTransitive/Microsoft.Web.WebView2.targets",
+        "lib/Microsoft.Web.WebView2.Core.winmd",
+        "lib/net462/Microsoft.Web.WebView2.Core.dll",
+        "lib/net462/Microsoft.Web.WebView2.Core.xml",
+        "lib/net462/Microsoft.Web.WebView2.WinForms.dll",
+        "lib/net462/Microsoft.Web.WebView2.WinForms.xml",
+        "lib/net462/Microsoft.Web.WebView2.Wpf.dll",
+        "lib/net462/Microsoft.Web.WebView2.Wpf.xml",
+        "lib_manual/net5.0-windows10.0.17763.0/Microsoft.Web.WebView2.Wpf.dll",
+        "lib_manual/net5.0-windows10.0.17763.0/Microsoft.Web.WebView2.Wpf.xml",
+        "lib_manual/net6.0-windows10.0.17763.0/Microsoft.Web.WebView2.Core.Projection.dll",
+        "lib_manual/net8.0-windows10.0.17763.0/Microsoft.Web.WebView2.Core.Projection.dll",
+        "lib_manual/netcoreapp3.0/Microsoft.Web.WebView2.Core.dll",
+        "lib_manual/netcoreapp3.0/Microsoft.Web.WebView2.Core.xml",
+        "lib_manual/netcoreapp3.0/Microsoft.Web.WebView2.WinForms.dll",
+        "lib_manual/netcoreapp3.0/Microsoft.Web.WebView2.WinForms.xml",
+        "lib_manual/netcoreapp3.0/Microsoft.Web.WebView2.Wpf.dll",
+        "lib_manual/netcoreapp3.0/Microsoft.Web.WebView2.Wpf.xml",
+        "microsoft.web.webview2.1.0.3967.48.nupkg.sha512",
+        "microsoft.web.webview2.nuspec",
+        "runtimes/win-arm64/native/WebView2Loader.dll",
+        "runtimes/win-arm64/native_uap/Microsoft.Web.WebView2.Core.dll",
+        "runtimes/win-x64/native/WebView2Loader.dll",
+        "runtimes/win-x64/native_uap/Microsoft.Web.WebView2.Core.dll",
+        "runtimes/win-x86/native/WebView2Loader.dll",
+        "runtimes/win-x86/native_uap/Microsoft.Web.WebView2.Core.dll",
+        "tools/VisualStudioToolsManifest.xml",
+        "tools/wv2winrt/Antlr3.Runtime.dll",
+        "tools/wv2winrt/Antlr4.StringTemplate.dll",
+        "tools/wv2winrt/System.Buffers.dll",
+        "tools/wv2winrt/System.CommandLine.DragonFruit.dll",
+        "tools/wv2winrt/System.CommandLine.Rendering.dll",
+        "tools/wv2winrt/System.CommandLine.dll",
+        "tools/wv2winrt/System.Memory.dll",
+        "tools/wv2winrt/System.Numerics.Vectors.dll",
+        "tools/wv2winrt/System.Runtime.CompilerServices.Unsafe.dll",
+        "tools/wv2winrt/codegen_util.dll",
+        "tools/wv2winrt/concrt140_app.dll",
+        "tools/wv2winrt/cs/System.CommandLine.resources.dll",
+        "tools/wv2winrt/de/System.CommandLine.resources.dll",
+        "tools/wv2winrt/es/System.CommandLine.resources.dll",
+        "tools/wv2winrt/fr/System.CommandLine.resources.dll",
+        "tools/wv2winrt/it/System.CommandLine.resources.dll",
+        "tools/wv2winrt/ja/System.CommandLine.resources.dll",
+        "tools/wv2winrt/ko/System.CommandLine.resources.dll",
+        "tools/wv2winrt/msvcp140_1_app.dll",
+        "tools/wv2winrt/msvcp140_2_app.dll",
+        "tools/wv2winrt/msvcp140_app.dll",
+        "tools/wv2winrt/pl/System.CommandLine.resources.dll",
+        "tools/wv2winrt/pt-BR/System.CommandLine.resources.dll",
+        "tools/wv2winrt/ru/System.CommandLine.resources.dll",
+        "tools/wv2winrt/tr/System.CommandLine.resources.dll",
+        "tools/wv2winrt/type_hierarchy.dll",
+        "tools/wv2winrt/vcamp140_app.dll",
+        "tools/wv2winrt/vccorlib140_app.dll",
+        "tools/wv2winrt/vcomp140_app.dll",
+        "tools/wv2winrt/vcruntime140_app.dll",
+        "tools/wv2winrt/winrt_winmd.dll",
+        "tools/wv2winrt/winrt_winmd.winmd",
+        "tools/wv2winrt/wv2winrt.exe",
+        "tools/wv2winrt/wv2winrt.exe.config",
+        "tools/wv2winrt/wv2winrt.xml",
+        "tools/wv2winrt/zh-Hans/System.CommandLine.resources.dll",
+        "tools/wv2winrt/zh-Hant/System.CommandLine.resources.dll"
       ]
     },
     "Newtonsoft.Json/13.0.4": {
@@ -441,6 +567,7 @@
   "projectFileDependencyGroups": {
     "net9.0-windows7.0": [
       "Microsoft.NET.ILLink.Tasks >= 9.0.13",
+      "Microsoft.Web.WebView2 >= 1.0.3967.48",
       "Newtonsoft.Json >= 13.0.4",
       "SharpCompress >= 0.38.0",
       "SteamKit2 >= 3.4.0"
@@ -451,13 +578,13 @@
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
-    "version": "2.5.0",
+    "version": "2.5.1",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Cilliain\\Desktop\\Testing\\SteamVault\\SteamVault.csproj",
+      "projectUniqueName": "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\SteamVault.csproj",
       "projectName": "SteamVault",
-      "projectPath": "C:\\Users\\Cilliain\\Desktop\\Testing\\SteamVault\\SteamVault.csproj",
+      "projectPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\SteamVault.csproj",
       "packagesPath": "C:\\Users\\Cilliain\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Cilliain\\Desktop\\Testing\\SteamVault\\obj\\",
+      "outputPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -501,6 +628,10 @@
             "target": "Package",
             "version": "[9.0.13, )",
             "autoReferenced": true
+          },
+          "Microsoft.Web.WebView2": {
+            "target": "Package",
+            "version": "[1.0.3967.48, )"
           },
           "Newtonsoft.Json": {
             "target": "Package",

@@ -12,6 +12,12 @@ public partial class DashboardView : System.Windows.Controls.UserControl
         InitializeComponent();
     }
 
+    private async void DashboardView_Loaded(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (DataContext is DashboardViewModel vm)
+            await vm.LoadFeaturedGamesAsync();
+    }
+
     private void SearchResult_Click(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement element && 

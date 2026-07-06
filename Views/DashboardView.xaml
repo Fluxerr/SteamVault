@@ -4,277 +4,471 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:viewmodels="clr-namespace:SteamVault.ViewModels"
+             xmlns:converters="clr-namespace:SteamVault.Converters"
              d:DataContext="{d:DesignInstance Type=viewmodels:DashboardViewModel}"
              mc:Ignorable="d" 
-             d:DesignHeight="680" d:DesignWidth="860">
+             d:DesignHeight="680" d:DesignWidth="860"
+             Loaded="DashboardView_Loaded">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <converters:InvertibleBoolToVisibilityConverter x:Key="BoolToVis" />
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="40,32,40,40">
+        <StackPanel Margin="48,40,48,40">
             <!-- Header -->
-            <StackPanel Margin="0,0,0,8">
-                <TextBlock Text="SteamVault" Style="{StaticResource TitleText}"/>
-                <TextBlock Text="Search for any Steam game by name or App ID. Everything is automatic." 
-                           Style="{StaticResource SubtitleText}" Margin="0,-12,0,28"/>
+            <Grid Margin="0,0,0,40">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Dashboard" Style="{DynamicResource TitleText}"/>
+                    <TextBlock Text="Search Steam, generate Lua configs, and install through Steam from one focused workspace." 
+                               Style="{DynamicResource SubtitleText}"/>
+                </StackPanel>
+                <Button Grid.Column="1" Command="{Binding ResetDashboardCommand}" 
+                        Style="{DynamicResource GhostButton}" Padding="12,8"
+                        Visibility="{Binding HasGameInfo, Converter={StaticResource BoolToVis}}"
+                        VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryAccent}"/>
+                        <TextBlock Text="Refresh" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryAccent}" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- Search Area -->
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Grid>
+                    <TextBox Text="{Binding AppIdInput, UpdateSourceTrigger=PropertyChanged}" 
+                             Height="56" FontSize="16" VerticalContentAlignment="Center"
+                             Padding="48,0,16,0" Tag="Search by game name or App ID">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding DownloadCommand}"/>
+                            <KeyBinding Key="Escape" Command="{Binding SelectSearchResultCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" 
+                               FontSize="18" Foreground="{DynamicResource MutedText}" 
+                               VerticalAlignment="Center" Margin="18,0,0,0" IsHitTestVisible="False"/>
+
+                    <TextBlock Text="Scanning..." FontSize="12" HorizontalAlignment="Right" 
+                               VerticalAlignment="Center" Margin="0,0,16,0"
+                               Foreground="{DynamicResource PrimaryAccent}"
+                               Visibility="{Binding IsSearching, Converter={StaticResource BoolToVis}}"/>
+                </Grid>
+
+                <Button Grid.Column="1" Content="Download Config" Width="180" Height="56" Margin="16,0,0,0" 
+                        Command="{Binding DownloadCommand}" FontSize="15"/>
+            </Grid>
+
+            <!-- Search Results Dropdown -->
+            <Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource SurfaceRaised}"
+                    Visibility="{Binding ShowSearchResults, Converter={StaticResource BoolToVis}}"
+                    Margin="0,0,196,16">
+                <Border.Effect>
+                    <DropShadowEffect Color="#000000" BlurRadius="20" Opacity="0.3" ShadowDepth="8"/>
+                </Border.Effect>
+                <ItemsControl ItemsSource="{Binding SearchResults}" MaxHeight="320">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="ResultItem" Background="Transparent" 
+                                    Padding="16,12" Cursor="Hand"
+                                    MouseLeftButtonDown="SearchResult_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" CornerRadius="4" ClipToBounds="True" Width="72" Height="32">
+                                        <Image Source="{Binding ImageUrl}" Stretch="UniformToFill"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" 
+                                               VerticalAlignment="Center" FontSize="14"
+                                               TextTrimming="CharacterEllipsis" Margin="12,0"/>
+                                    <Border Grid.Column="2" Background="{DynamicResource SurfaceHover}" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding AppId}" Style="{DynamicResource MonoText}" FontSize="11" Foreground="{DynamicResource MutedText}"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <Trigger SourceName="ResultItem" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ResultItem" Property="Background" Value="{DynamicResource SurfaceHover}"/>
+                                </Trigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <!-- Progress & Error (Shown when Game Card is hidden) -->
+            <StackPanel Margin="0,0,0,24">
+                <StackPanel Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" Margin="0,0,0,16">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="&#xE896;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" FontSize="14" Foreground="{DynamicResource MutedText}"/>
+                    </StackPanel>
+                    <ProgressBar Value="{Binding Progress}" Maximum="100"/>
+                </StackPanel>
+
+                <Border CornerRadius="8" Padding="16,12" Background="#EF444415"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE783;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource ErrorBrush}" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Download failed - check the App ID or connectivity" Foreground="{DynamicResource ErrorBrush}" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
-            <!-- Search Card -->
-            <Border Background="{StaticResource CardBackground}" CornerRadius="14" 
-                    Padding="20,16" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                    Style="{StaticResource GlowCard}" Margin="0,0,0,12">
+            <!-- Game Result Card -->
+            <Border Style="{DynamicResource SurfaceCard}" Margin="0,0,0,24" Padding="0" ClipToBounds="True"
+                    Visibility="{Binding HasGameInfo, Converter={StaticResource BoolToVis}}">
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="240"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <Grid>
-                        <TextBox Text="{Binding AppIdInput, UpdateSourceTrigger=PropertyChanged}" 
-                                 Height="50" FontSize="16" VerticalContentAlignment="Center"
-                                 Tag="🔍  Search by game name or App ID...">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Return" Command="{Binding DownloadCommand}"/>
-                                <KeyBinding Key="Escape" Command="{Binding SelectSearchResultCommand}"/>
-                            </TextBox.InputBindings>
-                        </TextBox>
-
-                        <TextBlock Text="⏳" FontSize="14" HorizontalAlignment="Right" 
-                                   VerticalAlignment="Center" Margin="0,0,14,0"
-                                   Visibility="{Binding IsSearching, Converter={StaticResource BoolToVis}}"/>
+                    <!-- Header Banner -->
+                    <Grid Grid.Row="0">
+                        <Border Background="{DynamicResource SurfaceRaised}"/>
+                        <Image Source="{Binding GameImage}" Stretch="UniformToFill" Style="{DynamicResource FadeInImage}"/>
+                        <Border>
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#33000000" Offset="0"/>
+                                    <GradientStop Color="#F21A1A1F" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <StackPanel VerticalAlignment="Bottom" Margin="40,0,40,24">
+                            <TextBlock Text="{Binding GameName}" FontSize="32" FontWeight="Bold" TextWrapping="Wrap"/>
+                        </StackPanel>
                     </Grid>
 
-                    <Button Grid.Column="1" Content="⬇  Download" Width="160" Height="50" Margin="14,0,0,0" 
-                            Command="{Binding DownloadCommand}" FontSize="15"/>
+                    <!-- Content Area -->
+                    <Grid Grid.Row="1" Margin="40,24,40,40">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="280"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left Info -->
+                        <StackPanel Grid.Column="0" Margin="0,0,48,0">
+                            <!-- Multiplayer Warning -->
+                            <Border CornerRadius="8" Padding="12,10" Margin="0,0,0,24" Background="#1A2B200A" Visibility="{Binding ShowMultiplayerWarning, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource WarningBrush}" Margin="0,0,12,0" VerticalAlignment="Center" FontSize="14"/>
+                                    <TextBlock Text="Singleplayer only - multiplayer features must be added in the 'Multiplayer' tab."
+                                               Foreground="{DynamicResource WarningBrush}" FontSize="13" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <WrapPanel Margin="0,0,0,24">
+                                <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                    <TextBlock Text="{Binding AppIdInput, StringFormat='ID: {0}'}" Style="{DynamicResource MonoText}" FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                </Border>
+                                <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                    <TextBlock Text="{Binding GameType}" FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                </Border>
+                                <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                    <TextBlock Text="{Binding GameReleaseDate}" FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                </Border>
+                                <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8"
+                                        Visibility="{Binding EstimatedSize, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding EstimatedSize, StringFormat='Size {0}'}"
+                                               FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                </Border>
+                            </WrapPanel>
+
+                            <TextBlock Text="{Binding GameDescription}" TextWrapping="Wrap" FontSize="14" LineHeight="24"
+                                       Foreground="{DynamicResource MutedText}" Margin="0,0,0,32"/>
+
+                            <!-- Stats -->
+                            <StackPanel Visibility="{Binding ShowSteamDbStats, Converter={StaticResource BoolToVis}}" Orientation="Horizontal" Margin="0,0,0,16">
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding PlayerCountText, Converter={StaticResource BoolToVis}}" Margin="0,0,32,0">
+                                    <TextBlock Text="&#xE716;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding PlayerCountText}" FontSize="13" Foreground="{DynamicResource MutedText}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding ReviewScoreText, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="&#xE735;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource DimText}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ReviewScoreText}" FontSize="13" Foreground="{DynamicResource MutedText}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border CornerRadius="8" Padding="16,12" Background="#1A34D399" Margin="0,0,0,12" HorizontalAlignment="Left">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE93E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,12,0" VerticalAlignment="Center" FontSize="16"/>
+                                    <TextBlock Text="{Binding ResultSummary}" Foreground="{DynamicResource SuccessBrush}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Success Text -->
+                            <StackPanel Orientation="Horizontal" Visibility="{Binding IsComplete, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="&#xE73E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource SuccessBrush}" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Lua generated successfully - ready to play" Foreground="{DynamicResource SuccessBrush}" FontSize="13" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Right Actions -->
+                        <StackPanel Grid.Column="1">
+                            <Button Content="Install via Steam" Command="{Binding InstallGameCommand}" Margin="0,0,0,16"/>
+                            <Button Content="Open Lua Folder" Command="{Binding OpenLuaFolderCommand}" Style="{DynamicResource GhostButton}"/>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </Border>
 
-            <!-- Search Results Dropdown -->
-            <Border CornerRadius="12" ClipToBounds="True"
-                    Visibility="{Binding ShowSearchResults, Converter={StaticResource BoolToVis}}"
-                    Margin="0,0,174,12">
-                <Border CornerRadius="12" BorderBrush="#3A2A5E" BorderThickness="1" Background="#1A1A28">
-                    <ItemsControl ItemsSource="{Binding SearchResults}" MaxHeight="320">
+            <!-- ═══ FEATURED CONFIGS + QUICK ACTIONS ═══ -->
+            <Grid Margin="0,0,0,16"
+                  Visibility="{Binding HasGameInfo, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- FEATURED CONFIGS (left column) -->
+                <StackPanel Grid.Column="0"
+                            Visibility="{Binding HasFeaturedGames, Converter={StaticResource BoolToVis}}">
+                    <!-- Header Row -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Featured Configs" Style="{DynamicResource SectionHeader}" Margin="0"/>
+                        <Button Grid.Column="1" Command="{Binding ViewAllCommand}" Style="{DynamicResource GhostButton}"
+                                Padding="8,4" BorderThickness="0" FontSize="12">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="View All" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="→" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryAccent}"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Vertical list of game cards -->
+                    <ItemsControl ItemsSource="{Binding FeaturedGames}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border x:Name="ResultItem" Background="Transparent" 
-                                        Padding="14,10" Cursor="Hand"
-                                        MouseLeftButtonDown="SearchResult_Click"
-                                        ToolTipService.ToolTip="{Binding Name}"
-                                        ToolTipService.Placement="Mouse">
-                                    <Border.Resources>
-                                        <Style TargetType="ToolTip" BasedOn="{StaticResource PremiumToolTip}"/>
-                                    </Border.Resources>
+                                <Border x:Name="FeatureRow" Margin="0,0,0,10" Background="{DynamicResource SurfaceRaised}"
+                                        CornerRadius="10" Cursor="Hand" ClipToBounds="True">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="#000000" BlurRadius="10" Opacity="0.18" ShadowDepth="3"/>
+                                    </Border.Effect>
                                     <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="50"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" CornerRadius="6" ClipToBounds="True" 
-                                                Width="44" Height="20" VerticalAlignment="Center">
-                                            <Image Source="{Binding ImageUrl}" Stretch="UniformToFill"/>
-                                        </Border>
-                                        <TextBlock Grid.Column="1" Text="{Binding Name}" 
-                                                   VerticalAlignment="Center" FontSize="13"
-                                                   TextTrimming="CharacterEllipsis" Margin="4,0"/>
-                                        <Border Grid.Column="2" Background="#1E1E30" CornerRadius="6" 
-                                                Padding="8,3" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding AppId}" FontSize="11" 
-                                                       Foreground="{StaticResource DimText}"/>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Grid Grid.Row="0" Margin="14,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Game Image -->
+                                            <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Height="48">
+                                                <Image Source="{Binding HeaderImageUrl}" Stretch="UniformToFill" Style="{DynamicResource FadeInImage}"/>
+                                            </Border>
+
+                                            <!-- Game Name + Status -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,10,0">
+                                                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" Margin="0,0,0,3"/>
+                                                <Border Visibility="{Binding NeedsUpdate, Converter={StaticResource BoolToVis}}"
+                                                        Background="#33FBBF24" CornerRadius="3" Padding="4,2" HorizontalAlignment="Left">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Ellipse Width="5" Height="5" Fill="{DynamicResource WarningBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="Update needed" FontSize="10" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}"
+                                                        Background="#1A34D399" CornerRadius="3" Padding="4,2" HorizontalAlignment="Left">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Ellipse Width="5" Height="5" Fill="{DynamicResource SuccessBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="Installed" FontSize="10" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <!-- Action Buttons -->
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Margin="0,0,4,0">
+                                                <!-- Update Button with blinking dot -->
+                                                <Button Command="{Binding DataContext.UpdateFeaturedGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Visibility="{Binding NeedsUpdate, Converter={StaticResource BoolToVis}}"
+                                                        Height="28" Padding="10,0" FontSize="11" Margin="0,0,6,0"
+                                                        ToolTip="Update config">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                            <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                                            <Setter Property="Foreground" Value="#1A1A1F"/>
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#F59E0B"/>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Ellipse Width="6" Height="6" Fill="#1A1A1F" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                            <Ellipse.Style>
+                                                                <Style TargetType="Ellipse">
+                                                                    <Style.Triggers>
+                                                                        <EventTrigger RoutedEvent="Loaded">
+                                                                            <BeginStoryboard>
+                                                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.3" Duration="0:0:1.2">
+                                                                                        <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                                                                    </DoubleAnimation>
+                                                                                </Storyboard>
+                                                                            </BeginStoryboard>
+                                                                        </EventTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Ellipse.Style>
+                                                        </Ellipse>
+                                                        <TextBlock Text="Update" FontWeight="SemiBold" FontSize="11"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Command="{Binding DataContext.PlayFeaturedGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}"
+                                                        Height="32" Width="32" Padding="0" ToolTip="Play"
+                                                        Style="{DynamicResource GhostButton}">
+                                                    <TextBlock Text="&#xE768;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                               FontSize="16" Foreground="{DynamicResource PrimaryAccent}" HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- Purple Hover Underline -->
+                                        <Border x:Name="HoverUnderline" Grid.Row="1" Height="2"
+                                                Background="{DynamicResource PrimaryAccent}"
+                                                HorizontalAlignment="Stretch"
+                                                CornerRadius="1" Opacity="0" Margin="10,0,10,0"
+                                                RenderTransformOrigin="0.5,0.5">
+                                            <Border.RenderTransform>
+                                                <ScaleTransform ScaleX="0" ScaleY="1"/>
+                                            </Border.RenderTransform>
                                         </Border>
                                     </Grid>
                                 </Border>
                                 <DataTemplate.Triggers>
-                                    <Trigger SourceName="ResultItem" Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="ResultItem" Property="Background" Value="#222238"/>
+                                    <Trigger SourceName="FeatureRow" Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="FeatureRow" Property="Background" Value="{DynamicResource SurfaceHover}"/>
+                                        <Trigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="HoverUnderline"
+                                                                     Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.1">
+                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetName="HoverUnderline"
+                                                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                     To="1" Duration="0:0:0.35">
+                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.EnterActions>
+                                        <Trigger.ExitActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="HoverUnderline"
+                                                                     Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15">
+                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetName="HoverUnderline"
+                                                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                     To="0" Duration="0:0:0.2">
+                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.ExitActions>
                                     </Trigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                </Border>
-            </Border>
+                </StackPanel>
 
-            <!-- Game Result Card -->
-            <Border CornerRadius="14" Padding="0" Margin="0,0,0,20"
-                    BorderBrush="#2A1A4E" BorderThickness="1"
-                    Visibility="{Binding HasGameInfo, Converter={StaticResource BoolToVis}}"
-                    Style="{StaticResource GlowCard}">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#141420" Offset="0"/>
-                        <GradientStop Color="#1A1A2E" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-                <Grid Margin="28,28,28,28">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="280" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Grid.Column="0" CornerRadius="10" ClipToBounds="True" 
-                            VerticalAlignment="Top" HorizontalAlignment="Left">
-                        <Image Source="{Binding GameImage}" Stretch="Uniform" Width="280"
-                               Style="{StaticResource FadeInImage}"/>
-                    </Border>
-                    <StackPanel Grid.Column="1" Margin="28,0,0,0">
-                        <TextBlock Text="{Binding GameName}" FontSize="26" FontWeight="Bold" 
-                                   TextWrapping="Wrap" Margin="0,0,0,10"/>
-                        <!-- Multiplayer Warning (with pulsing amber orb) -->
-                        <Border CornerRadius="6" Padding="10,5" Margin="0,0,0,10"
-                                BorderBrush="#8B5A00" BorderThickness="1"
-                                Visibility="{Binding ShowMultiplayerWarning, Converter={StaticResource BoolToVis}}">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#1A1500" Offset="0"/>
-                                    <GradientStop Color="#221800" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
+                <!-- QUICK ACTIONS (right column) -->
+                <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                    <TextBlock Text="Quick Actions" Style="{DynamicResource SectionHeader}" Margin="0,0,0,16"/>
+                    <Border x:Name="QALuaFolder" Background="{DynamicResource SurfaceRaised}" CornerRadius="10" Padding="16,14"
+                            Cursor="Hand" Margin="0,0,0,8">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000" BlurRadius="8" Opacity="0.12" ShadowDepth="2"/>
+                        </Border.Effect>
+                        <Button Command="{Binding OpenLuaFolderQuickCommand}" Style="{DynamicResource GhostButton}"
+                                Padding="0" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Style="{StaticResource PulsingDotAmber}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="SINGLEPLAYER ONLY — Multiplayer features unavailable in cracked copies" 
-                                           Foreground="#FFB84D" FontSize="12" FontWeight="SemiBold"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                            <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
-                                <TextBlock Text="{Binding AppIdInput, StringFormat='ID: {0}'}" 
-                                           FontSize="12" Foreground="{StaticResource MutedText}"/>
-                            </Border>
-                            <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
-                                <TextBlock Text="{Binding GameType}" FontSize="12" Foreground="{StaticResource MutedText}"/>
-                            </Border>
-                            <Border Background="#1E1E30" CornerRadius="6" Padding="10,4">
-                                <TextBlock Text="{Binding GameReleaseDate}" FontSize="12" Foreground="{StaticResource MutedText}"/>
-                            </Border>
-                        </StackPanel>
-                        <TextBlock Text="{Binding GameDescription}" TextWrapping="Wrap" FontSize="13" 
-                                   Foreground="{StaticResource MutedText}" MaxHeight="60" 
-                                   TextTrimming="CharacterEllipsis" Margin="0,0,0,14"/>
-
-                        <!-- Estimated Size -->
-                        <Border CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
-                                Background="#1A1A2E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                Visibility="{Binding EstimatedSize, Converter={StaticResource BoolToVis}}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="💾" FontSize="12" Margin="0,0,6,0"/>
-                                <TextBlock Text="{Binding EstimatedSize, StringFormat='Estimated size: {0}'}" 
-                                           FontSize="12" Foreground="{StaticResource MutedText}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- SteamDB Stats -->
-                        <StackPanel Margin="0,0,0,10" Visibility="{Binding ShowSteamDbStats, Converter={StaticResource BoolToVis}}">
-                            <Border CornerRadius="6" Padding="10,6" Margin="0,0,0,4"
-                                    Background="#1A1A2E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                    Visibility="{Binding PlayerCountText, Converter={StaticResource BoolToVis}}">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Style="{StaticResource PulsingDotGreen}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="{Binding PlayerCountText}" FontSize="12" Foreground="{StaticResource MutedText}" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#xE838;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="16" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="Open Lua Folder" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                    <TextBlock Text="Browse generated configs" FontSize="11" Foreground="{DynamicResource MutedText}"/>
                                 </StackPanel>
-                            </Border>
-                            <Border CornerRadius="6" Padding="10,6"
-                                    Background="#1A1A2E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                    Visibility="{Binding ReviewScoreText, Converter={StaticResource BoolToVis}}">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="⭐" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="{Binding ReviewScoreText}" FontSize="12" Foreground="{StaticResource MutedText}"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                        <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,12"
-                                BorderBrush="#1A5A30" BorderThickness="1">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#0D2818" Offset="0"/>
-                                    <GradientStop Color="#143A1B" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <TextBlock Text="{Binding ResultSummary}" 
-                                       Foreground="#4ADE80" FontSize="13" FontWeight="SemiBold"/>
-                        </Border>
-                        <StackPanel Orientation="Horizontal">
-                            <Button Content="▶  Install via Steam" 
-                                    Command="{Binding InstallGameCommand}"
-                                    HorizontalAlignment="Left" Padding="16,8" Margin="0,0,12,0"/>
-                            <Button Content="📁  Open Lua Folder" 
-                                    Command="{Binding OpenLuaFolderCommand}"
-                                    Style="{StaticResource GhostButton}"
-                                    HorizontalAlignment="Left" Padding="16,8"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- Status Bar -->
-            <Border CornerRadius="14" Padding="24,16"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Color="#141420" Offset="0"/>
-                        <GradientStop Color="#161626" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse Style="{StaticResource PulsingDot}" 
-                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"
-                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" FontSize="13">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                    <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasError}" Value="True">
-                                            <Setter Property="Foreground" Value="#EF4444"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding IsComplete}" Value="True">
-                                            <Setter Property="Foreground" Value="#10B981"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
-                    <ProgressBar Value="{Binding Progress}" Maximum="100" Height="6" Margin="0,14,0,0"
-                                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"/>
-                    <Border CornerRadius="10" Padding="18,14" Margin="0,16,0,0"
-                            Visibility="{Binding IsComplete, Converter={StaticResource BoolToVis}}">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#0D2818" Offset="0"/>
-                                <GradientStop Color="#0A3A20" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="✓" Foreground="#10B981" FontSize="20" FontWeight="Bold" 
-                                       Margin="0,0,12,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="LUA GENERATED — READY TO USE" 
-                                       Foreground="#34D399" FontSize="14" FontWeight="Bold" 
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
+                            </StackPanel>
+                        </Button>
                     </Border>
-                    <Border CornerRadius="10" Padding="18,14" Margin="0,16,0,0"
-                            Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#2A0D0D" Offset="0"/>
-                                <GradientStop Color="#3A1414" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="✗" Foreground="#EF4444" FontSize="20" FontWeight="Bold" 
-                                       Margin="0,0,12,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="DOWNLOAD FAILED — CHECK APP ID" 
-                                       Foreground="#F87171" FontSize="14" FontWeight="Bold" 
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
+
+                    <Border x:Name="QAUpdateAll" Background="{DynamicResource SurfaceRaised}" CornerRadius="10" Padding="16,14"
+                            Cursor="Hand" Margin="0,0,0,8">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000" BlurRadius="8" Opacity="0.12" ShadowDepth="2"/>
+                        </Border.Effect>
+                        <Button Command="{Binding UpdateAllGamesCommand}" Style="{DynamicResource GhostButton}"
+                                Padding="0" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE896;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="16" Foreground="{DynamicResource WarningBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="Update All Games" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                    <TextBlock Text="Scan and update configs" FontSize="11" Foreground="{DynamicResource MutedText}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                    </Border>
+
+                    <Border x:Name="QAAutoUpdate" Background="{DynamicResource SurfaceRaised}" CornerRadius="10" Padding="16,14"
+                            Cursor="Hand" Margin="0,0,0,8">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000" BlurRadius="8" Opacity="0.12" ShadowDepth="2"/>
+                        </Border.Effect>
+                        <Button Command="{Binding ToggleAutoUpdateCommand}" Style="{DynamicResource GhostButton}"
+                                Padding="0" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE785;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="16" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="Toggle Auto Updater" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                    <TextBlock Text="{Binding AutoUpdateText}" FontSize="11" Foreground="{DynamicResource MutedText}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
                     </Border>
                 </StackPanel>
-            </Border>
+
+            </Grid>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

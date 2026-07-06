@@ -10,399 +10,318 @@
              d:DesignHeight="680" d:DesignWidth="860">
     <UserControl.Resources>
         <converters:InvertibleBoolToVisibilityConverter x:Key="BoolToVis" />
+        
+        <DataTemplate x:Key="OnlineCardTemplate">
+            <Border x:Name="OnlineCard" Margin="6" Background="{DynamicResource SurfaceBase}" CornerRadius="12" ClipToBounds="True" Cursor="Hand" RenderTransformOrigin="0.5,0.5" TextOptions.TextFormattingMode="Ideal" TextOptions.TextHintingMode="Animated">
+                <Border.InputBindings>
+                    <MouseBinding Gesture="LeftClick" Command="{Binding DataContext.SelectGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
+                </Border.InputBindings>
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Border.RenderTransform>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <Border Grid.Row="0" CornerRadius="12,12,0,0" ClipToBounds="True">
+                        <Grid>
+                            <Border Background="{DynamicResource SurfaceRaised}" Height="120"/>
+                            <Image Source="{Binding HeaderImageUrl}" Stretch="UniformToFill" Height="120" Style="{DynamicResource FadeInImage}"/>
+                            
+                            <Border VerticalAlignment="Bottom" Height="50">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#00000000" Offset="0"/>
+                                        <GradientStop Color="#CC1A1A1F" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            
+                            <!-- Fix Status Indicator -->
+                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,10" Width="10" Height="10" CornerRadius="5">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding FixApplied}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Margin="14,10,14,14">
+                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" Margin="0,0,0,8"/>
+                        <Border x:Name="IdPill" Background="{DynamicResource SurfaceHover}" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Opacity="0">
+                            <TextBlock Text="{Binding AppId, StringFormat='ID: {0}'}" Style="{DynamicResource MonoText}" FontSize="11" Foreground="{DynamicResource DimText}"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <Trigger SourceName="OnlineCard" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="OnlineCard" Property="Background" Value="{DynamicResource SurfaceRaised}"/>
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="OnlineCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.02" Duration="0:0:0.15"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="OnlineCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.02" Duration="0:0:0.15"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="IdPill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="OnlineCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
+                                <DoubleAnimation Storyboard.TargetName="OnlineCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
+                                <DoubleAnimation Storyboard.TargetName="IdPill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="40,32,40,40">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+    <Grid>
+        <!-- Top Scanning Bar -->
+        <Border Height="3" Background="{DynamicResource PrimaryAccent}" VerticalAlignment="Top" 
+                Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.5" To="1" AutoReverse="True" Duration="0:0:0.8"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
 
-            <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                <TextBlock Text="Online" Style="{StaticResource TitleText}"/>
-                <TextBlock Text="Apply multiplayer fixes from online-fix.me to your installed games." 
-                           Style="{StaticResource SubtitleText}" Margin="0,-12,0,12"/>
-            </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid Margin="48,40,48,40">
+                <!-- ═══ GAME GRID ═══ -->
+                <Grid Visibility="{Binding ShowGameGrid, Converter={StaticResource BoolToVis}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-            <!-- Toolbar -->
-            <Grid Grid.Row="1" Margin="0,0,0,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Button Grid.Column="1" Content="Refresh" 
-                        Command="{Binding RefreshCommand}"
-                        Style="{StaticResource GhostButton}" 
-                        Width="120" Height="42"/>
-            </Grid>
-
-            <!-- ==================== GAME GRID VIEW ==================== -->
-            <Grid Grid.Row="2" Visibility="{Binding ShowGameGrid, Converter={StaticResource BoolToVis}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <!-- No games state -->
-                <TextBlock Grid.Row="0" Text="No online-capable games found in your library."
-                           Visibility="{Binding HasNoGames, Converter={StaticResource BoolToVis}}"
-                           Foreground="{StaticResource MutedText}" FontSize="15"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
-                <!-- Games Grid -->
-                <ItemsControl ItemsSource="{Binding Games}" Grid.Row="0"
-                              Visibility="{Binding HasNoGames, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Columns="2" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border x:Name="OnlineCard" Margin="8" 
-                                    Background="{StaticResource CardBackground}" 
-                                    CornerRadius="14" Padding="0"
-                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                    Cursor="Hand">
-                                <Border.InputBindings>
-                                    <MouseBinding Gesture="LeftClick"
-                                                  Command="{Binding DataContext.SelectGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                  CommandParameter="{Binding}"/>
-                                </Border.InputBindings>
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="130"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Game header image -->
-                                    <Border Grid.Row="0" CornerRadius="13,13,0,0" ClipToBounds="True">
-                                        <Grid>
-                                            <Image Source="{Binding HeaderImageUrl}" 
-                                                   Stretch="UniformToFill" 
-                                                   HorizontalAlignment="Center"
-                                                   Style="{StaticResource FadeInImage}"/>
-                                            <Border>
-                                                <Border.Background>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                        <GradientStop Color="Transparent" Offset="0.5"/>
-                                                        <GradientStop Color="#CC0A0A14" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Border.Background>
-                                            </Border>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- Details and status -->
-                                    <StackPanel Grid.Row="1" Margin="18,14,18,18">
-                                        <TextBlock Text="{Binding Name}" 
-                                                   FontSize="17" FontWeight="Bold"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Margin="0,0,0,8"/>
-
-                                        <Grid Margin="0,0,0,12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <Border Background="#1E1E30" CornerRadius="6" Padding="8,3">
-                                                <TextBlock Text="{Binding AppId, StringFormat='App ID {0}'}" 
-                                                           FontSize="11" Foreground="{StaticResource MutedText}"/>
-                                            </Border>
-
-                                            <!-- Status Badge -->
-                                            <Border Grid.Column="2" CornerRadius="6" Padding="10,3">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="#2A1A0A"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding FixApplied}" Value="True">
-                                                                <Setter Property="Background" Value="#102A1A"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding IsInstalled}" Value="True">
-                                                                <Setter Property="Background" Value="#1A1A2E"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="Bold">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="#F59E0B"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding FixApplied}" Value="True">
-                                                                    <Setter Property="Foreground" Value="#10B981"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsInstalled}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccent}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Border>
-                                        </Grid>
-
-                                        <!-- Card action buttons -->
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                            <Button Content="View Details" 
-                                                    Command="{Binding DataContext.SelectGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    Style="{StaticResource GhostButton}"
-                                                    FontSize="11" Padding="10,6"
-                                                    ToolTip="View details"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                            <DataTemplate.Triggers>
-                                <Trigger SourceName="OnlineCard" Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="OnlineCard" Property="BorderBrush" Value="{StaticResource PrimaryAccent}"/>
-                                </Trigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Grid>
-
-            <!-- ==================== DETAIL VIEW ==================== -->
-            <Grid Grid.Row="2" Visibility="{Binding ShowGameDetail, Converter={StaticResource BoolToVis}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- Back button -->
-                <Button Grid.Row="0" Content="← Back to Games" 
-                        Command="{Binding BackToGridCommand}"
-                        Style="{StaticResource GhostButton}"
-                        HorizontalAlignment="Left" Margin="0,0,0,16"
-                        FontSize="13" Padding="12,8"/>
-
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <Grid>
+                    <Grid Grid.Row="0" Margin="0,0,0,32">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="320"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Online Fixes" Style="{DynamicResource TitleText}"/>
+                            <TextBlock Text="Match installed games with online-fix.me workflows and apply fixes." Style="{DynamicResource SubtitleText}"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Command="{Binding RefreshCommand}" Style="{DynamicResource GhostButton}" Padding="12,8" VerticalAlignment="Top">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
 
-                        <!-- Left: Game header image + info -->
-                        <StackPanel Grid.Column="0" Margin="0,0,24,0">
-                            <Border CornerRadius="14" ClipToBounds="True" 
-                                    Background="{StaticResource CardBackground}"
-                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                                <Image Source="{Binding SelectedGame.HeaderImageUrl}" 
-                                       Stretch="UniformToFill" MinHeight="180"
-                                       Style="{StaticResource FadeInImage}"/>
+                    <TextBlock Grid.Row="1" Text="No online-capable games found in your library." Visibility="{Binding HasNoGames, Converter={StaticResource BoolToVis}}" Foreground="{DynamicResource MutedText}" FontSize="15" HorizontalAlignment="Center" Margin="0,80,0,0"/>
+
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Games}" ItemTemplate="{StaticResource OnlineCardTemplate}" Visibility="{Binding HasNoGames, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Grid>
+
+                <!-- ═══ DETAIL VIEW ═══ -->
+                <Border Visibility="{Binding ShowGameDetail, Converter={StaticResource BoolToVis}}" Padding="0" ClipToBounds="True">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource SurfaceCard}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ShowGameDetail}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,30,0,0" To="0" Duration="0:0:0.35">
+                                                    <ThicknessAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ThicknessAnimation.EasingFunction>
+                                                </ThicknessAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="220"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header Banner -->
+                        <Grid Grid.Row="0">
+                            <Border Background="{DynamicResource SurfaceRaised}"/>
+                            <Image Source="{Binding SelectedGame.HeaderImageUrl}" Stretch="UniformToFill" Style="{DynamicResource FadeInImage}"/>
+                            <Border>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#33000000" Offset="0"/>
+                                        <GradientStop Color="#F21A1A1F" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
                             </Border>
+                            <StackPanel VerticalAlignment="Bottom" Margin="40,0,40,24">
+                                <Button Command="{Binding BackToGridCommand}" Style="{DynamicResource GhostButton}" HorizontalAlignment="Left" Padding="8,4" Margin="-8,0,0,16" BorderThickness="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE72B;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Back to Games" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Text="{Binding SelectedGame.Name}" FontSize="28" FontWeight="Bold" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
 
-                            <StackPanel Margin="0,20,0,0">
-                                <TextBlock Text="{Binding SelectedGame.Name}" 
-                                           FontSize="22" FontWeight="Bold"
-                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding SelectedGame.AppId, StringFormat='App ID: {0}'}"
-                                           Foreground="{StaticResource MutedText}" FontSize="13"
-                                           Margin="0,0,0,12"/>
+                        <Grid Grid.Row="1" Margin="40,24,40,40">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="340"/>
+                            </Grid.ColumnDefinitions>
 
-                                <!-- Status Badge -->
-                                <Border CornerRadius="8" Padding="14,8" HorizontalAlignment="Left">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="#2A1A0A"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedGame.FixApplied}" Value="True">
-                                                    <Setter Property="Background" Value="#102A1A"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding SelectedGame.IsInstalled}" Value="False">
-                                                    <Setter Property="Background" Value="#2A1A0A"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <TextBlock Text="{Binding SelectedGame.Status}" 
-                                               FontSize="13" FontWeight="Bold">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="#F59E0B"/>
+                            <!-- Left Info -->
+                            <StackPanel Grid.Column="0" Margin="0,0,48,0">
+                                <WrapPanel Margin="0,0,0,24">
+                                    <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                        <TextBlock Text="{Binding SelectedGame.AppId, StringFormat='ID: {0}'}" Style="{DynamicResource MonoText}" FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                    </Border>
+                                    <Border CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#33FBBF24"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedGame.FixApplied}" Value="True">
-                                                        <Setter Property="Foreground" Value="#10B981"/>
+                                                        <Setter Property="Background" Value="#3334D399"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding SelectedGame.Status}" FontSize="12" FontWeight="Medium">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedGame.FixApplied}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </WrapPanel>
+
+                                <Border Background="{DynamicResource SurfaceRaised}" CornerRadius="8" Padding="20" Margin="0,0,0,24">
+                                    <StackPanel>
+                                        <TextBlock Text="How to apply a multiplayer fix" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,16"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Border Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceHover}" Margin="0,0,12,0">
+                                                <TextBlock Text="1" Foreground="{DynamicResource MutedText}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12"/>
+                                            </Border>
+                                            <TextBlock Text="Click the button below to open online-fix.me" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Border Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceHover}" Margin="0,0,12,0">
+                                                <TextBlock Text="2" Foreground="{DynamicResource MutedText}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12"/>
+                                            </Border>
+                                            <TextBlock Text="Download 'Fix Repair' (.rar) from the game page" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Border Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceHover}" Margin="0,0,12,0">
+                                                <TextBlock Text="3" Foreground="{DynamicResource MutedText}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12"/>
+                                            </Border>
+                                            <TextBlock Text="Save it to the SteamVault app folder" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceHover}" Margin="0,0,12,0">
+                                                <TextBlock Text="4" Foreground="{DynamicResource MutedText}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12"/>
+                                            </Border>
+                                            <TextBlock Text="The app auto-extracts it (password: online-fix.me)" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                                
+                                <Button Content="Open Game Folder" Command="{Binding OpenGameDirCommand}" CommandParameter="{Binding SelectedGame}" Style="{DynamicResource GhostButton}" HorizontalAlignment="Left" Visibility="{Binding SelectedGame.IsInstalled, Converter={StaticResource BoolToVis}}"/>
+                            </StackPanel>
+
+                            <!-- Right Actions -->
+                            <StackPanel Grid.Column="1">
+                                <Button Command="{Binding OpenOnlineFixCommand}" CommandParameter="{Binding SelectedGame}" Margin="0,0,0,16">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE774;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Download &amp; Apply Fix" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Border CornerRadius="8" Padding="16,12" Background="#33FBBF24" Margin="0,0,0,16" Visibility="{Binding NeedsAdminRights, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource WarningBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Admin rights required" Foreground="{DynamicResource WarningBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <Button Content="Restart as Administrator" Command="{Binding RestartAsAdminCommand}" Height="36"/>
+                                    </StackPanel>
                                 </Border>
 
-                                <!-- Open game folder button -->
-                                <Button Content="Open Game Folder" 
-                                        Command="{Binding OpenGameDirCommand}"
-                                        CommandParameter="{Binding SelectedGame}"
-                                        Style="{StaticResource GhostButton}"
-                                        HorizontalAlignment="Left" Margin="0,16,0,0"
-                                        FontSize="12" Padding="12,8"
-                                        Visibility="{Binding SelectedGame.IsInstalled, Converter={StaticResource BoolToVis}}"/>
+                                <Border CornerRadius="8" Padding="16,12" Background="#33FBBF24" Margin="0,0,0,16" Visibility="{Binding SelectedGame.IsInstalled, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                                    <TextBlock Text="Game is not installed. Install via Steam first." Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap"/>
+                                </Border>
+
+                                <TextBlock Text="{Binding DetailStatusMessage}" Foreground="{DynamicResource MutedText}" TextWrapping="Wrap" Margin="4,0,0,0"/>
+                                <ProgressBar Value="{Binding DownloadProgress}" Maximum="100" Height="4" Margin="0,12,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
                             </StackPanel>
-                        </StackPanel>
-
-                        <!-- Right: Instructions + URL + Download -->
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="How to apply a multiplayer fix:" 
-                                       FontSize="17" FontWeight="Bold" 
-                                       Margin="0,0,0,16"/>
-
-                             <!-- Step-by-step instructions -->
-                             <Border Background="{StaticResource CardBackground}" 
-                                     CornerRadius="12" Padding="20,18"
-                                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                     Margin="0,0,0,20">
-                                 <StackPanel>
-                                     <TextBlock Text="1. Click the button below to open online-fix.me in your browser."
-                                                Foreground="{StaticResource Text}" FontSize="13"
-                                                TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                     <TextBlock Text="2. Search for your game on the website."
-                                                Foreground="{StaticResource Text}" FontSize="13"
-                                                TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                     <TextBlock Text="3. Click 'Download fix from the server' on the game page."
-                                                Foreground="{StaticResource Text}" FontSize="13"
-                                                TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                     <TextBlock Text="4. Select the 'Fix Repair' folder (top option)."
-                                                Foreground="{StaticResource Text}" FontSize="13"
-                                                TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                     <TextBlock Text="5. Download the .rar file."
-                                                Foreground="{StaticResource Text}" FontSize="13"
-                                                TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                     <TextBlock Text="6. Save it to the SteamVault app folder."
-                                                Foreground="{StaticResource Text}" FontSize="13"
-                                                TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                     <TextBlock Text="7. The app auto-detects and extracts it (password: online-fix.me)."
-                                                Foreground="{StaticResource Text}" FontSize="13"
-                                                TextWrapping="Wrap"/>
-                                 </StackPanel>
-                             </Border>
-
-                            <!-- Open online-fix.me button -->
-                            <Button Content="Open online-fix.me in Browser" 
-                                    Command="{Binding OpenOnlineFixCommand}"
-                                    CommandParameter="{Binding SelectedGame}"
-                                    Height="42" Margin="0,0,0,16"
-                                    FontSize="13" FontWeight="SemiBold"
-                                    Foreground="White" Cursor="Hand"
-                                    HorizontalAlignment="Stretch">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border x:Name="Bg" CornerRadius="10" Background="#2A3A5E" Padding="20,10">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Bg" Property="Background" Value="#3A4A6E"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Button.Template>
-                            </Button>
-
-
-                            <!-- Download progress -->
-                            <ProgressBar Value="{Binding DownloadProgress}" Maximum="100" 
-                                         Height="5" Margin="0,0,0,12"
-                                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
-
-                             <!-- Apply Fix button -->
-                             <Button Content="Apply Fix" 
-                                     Command="{Binding ApplyFixCommand}"
-                                     CommandParameter="{Binding SelectedGame}"
-                                     Height="42"
-                                     FontSize="13" FontWeight="Bold"
-                                     Foreground="White" Cursor="Hand"
-                                     HorizontalAlignment="Stretch"
-                                     Visibility="{Binding SelectedGame.IsInstalled, Converter={StaticResource BoolToVis}}">
-                                 <Button.Template>
-                                     <ControlTemplate TargetType="Button">
-                                         <Border x:Name="Bg" CornerRadius="10" Background="{StaticResource PrimaryAccent}" Padding="20,10">
-                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                         </Border>
-                                         <ControlTemplate.Triggers>
-                                             <Trigger Property="IsMouseOver" Value="True">
-                                                 <Setter TargetName="Bg" Property="Background" Value="#7D5FFF"/>
-                                             </Trigger>
-                                         </ControlTemplate.Triggers>
-                                     </ControlTemplate>
-                                 </Button.Template>
-                             </Button>
-
-                             <!-- Run as Administrator button (appears when permission denied) -->
-                             <Button Content="🔒 Restart as Administrator" 
-                                     Command="{Binding RestartAsAdminCommand}"
-                                     Height="42" Margin="0,12,0,0"
-                                     FontSize="13" FontWeight="Bold"
-                                     Foreground="White" Cursor="Hand"
-                                     HorizontalAlignment="Stretch"
-                                     Visibility="{Binding NeedsAdminRights, Converter={StaticResource BoolToVis}}">
-                                 <Button.Template>
-                                     <ControlTemplate TargetType="Button">
-                                         <Border x:Name="Bg" CornerRadius="10" Background="#F59E0B" Padding="20,10">
-                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                         </Border>
-                                         <ControlTemplate.Triggers>
-                                             <Trigger Property="IsMouseOver" Value="True">
-                                                 <Setter TargetName="Bg" Property="Background" Value="#D97706"/>
-                                             </Trigger>
-                                         </ControlTemplate.Triggers>
-                                     </ControlTemplate>
-                                 </Button.Template>
-                             </Button>
-
-                            <!-- Not installed message -->
-                            <Border CornerRadius="10" Padding="16,14" Background="#2A1A0A"
-                                    Visibility="{Binding SelectedGame.IsInstalled, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
-                                <TextBlock Text="This game is not installed. Install it via Steam first, then come back to apply the fix."
-                                           Foreground="#F59E0B" FontSize="13" TextWrapping="Wrap"/>
-                            </Border>
-
-                            <!-- Status message -->
-                            <Border CornerRadius="10" Padding="16,14" 
-                                    Background="{StaticResource CardBackground}"
-                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                    Margin="0,20,0,0">
-                                <TextBlock Text="{Binding DetailStatusMessage}" 
-                                           Foreground="{StaticResource MutedText}" FontSize="13" 
-                                           TextWrapping="Wrap"/>
-                            </Border>
-                        </StackPanel>
+                        </Grid>
                     </Grid>
-                </ScrollViewer>
+                </Border>
             </Grid>
+        </ScrollViewer>
+        
+        <!-- Status Bar -->
+        <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="{DynamicResource DimText}" FontSize="12" Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=invert}"/>
 
-            <!-- Footer Status -->
-            <Border Grid.Row="3" Background="{StaticResource CardBackground}" CornerRadius="12" 
-                    Padding="16,14" Margin="0,16,0,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                    Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Ellipse Style="{StaticResource PulsingDot}" 
-                             VerticalAlignment="Center" Margin="0,0,10,0" Width="10" Height="10"/>
-                    <TextBlock Text="{Binding StatusMessage}" 
-                               Foreground="{StaticResource MutedText}" FontSize="13" 
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-            </Border>
+        <!-- ═══ COMING SOON FULL-PAGE OVERLAY ═══ -->
+        <Border Panel.ZIndex="100" Background="#E6121218" IsHitTestVisible="True" Cursor="Arrow">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,40">
+                <!-- Icon badge -->
+                <Border Width="72" Height="72" CornerRadius="36" Margin="0,0,0,24" HorizontalAlignment="Center">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="{StaticResource PrimaryAccentColor}" Offset="0"/>
+                            <GradientStop Color="#6C63FF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock Text="&#xE946;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="28" 
+                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <!-- Title -->
+                <TextBlock Text="Coming Soon" FontSize="28" FontWeight="Bold" 
+                           Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                <!-- Subtitle -->
+                <TextBlock Text="The online fix browser is being rebuilt for a better experience." 
+                           FontSize="15" Foreground="#99FFFFFF" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                <TextBlock Text="This feature will be available in a future update." 
+                           FontSize="14" Foreground="#66FFFFFF" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
 
-            <!-- Status Bar (when not scanning) -->
-            <Border Grid.Row="3" Background="{StaticResource CardBackground}" CornerRadius="12" 
-                    Padding="16,14" Margin="0,16,0,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                    Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
-                <TextBlock Text="{Binding StatusMessage}" 
-                           Foreground="{StaticResource MutedText}" FontSize="13" 
-                           HorizontalAlignment="Center"/>
-            </Border>
-        </Grid>
-    </ScrollViewer>
+    </Grid>
 </UserControl>

@@ -7,8 +7,8 @@ namespace SteamVault.Converters;
 
 /// <summary>
 /// Converts bool to Visibility. Supports optional inversion.
-/// Normal: true→Visible, false→Collapsed
-/// With ConverterParameter="invert" (or "Invert"): true→Collapsed, false→Visible
+/// Normal: true to Visible, false to Collapsed.
+/// With ConverterParameter="invert" (or "Invert"): true to Collapsed, false to Visible.
 /// </summary>
 public class InvertibleBoolToVisibilityConverter : IValueConverter
 {

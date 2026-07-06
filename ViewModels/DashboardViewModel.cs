@@ -17,11 +17,35 @@ public class DashboardViewModel : ViewModelBase
     private CancellationTokenSource? _searchCts;
     private System.Timers.Timer? _searchDebounce;
 
-    public DashboardViewModel(DownloadService downloadService, GameSearchService searchService, SteamApiService steamApi)
+    public DashboardViewModel(
+        DownloadService downloadService,
+        GameSearchService searchService,
+        SteamApiService steamApi,
+        LuaParserService luaParser,
+        SettingsService settings,
+        GameManagementService gameMgmt,
+        DepotKeyService depotKeyService)
     {
         _downloadService = downloadService;
         _searchService = searchService;
         _steamApi = steamApi;
+        _luaParser = luaParser;
+        _settings = settings;
+        _gameMgmt = gameMgmt;
+        _depotKeyService = depotKeyService;
+
+        PlayFeaturedGameCommand = new RelayCommand(
+            param => PlayGame(param as FeaturedGameEntry));
+
+        UpdateFeaturedGameCommand = new RelayCommand(
+            async param => await UpdateFeaturedGameAsync(param as FeaturedGameEntry),
+            param => param is FeaturedGameEntry g && !g.IsUpdating);
+
+        ViewAllCommand = new RelayCommand(_ => NavigateToLibrary?.Invoke());
+        OpenLuaFolderQuickCommand = new RelayCommand(_ => OpenLuaFolderQuick());
+        UpdateAllGamesCommand = new RelayCommand(_ => NavigateToLibraryAndUpdate?.Invoke());
+        ToggleAutoUpdateCommand = new RelayCommand(_ => ToggleAutoUpdate());
+        ResetDashboardCommand = new RelayCommand(_ => ResetDashboard());
 
         DownloadCommand = new RelayCommand(
             async _ => await DownloadAsync(),
@@ -38,6 +62,12 @@ public class DashboardViewModel : ViewModelBase
         SelectSearchResultCommand = new RelayCommand(
             param => SelectSearchResult(param as SearchResult));
     }
+
+    /// <summary>
+    /// Action set by MainViewModel to navigate to the My Games tab.
+    /// </summary>
+    public Action? NavigateToLibrary { get; set; }
+    public Action? NavigateToLibraryAndUpdate { get; set; }
 
     // --- Properties ---
     private string _appIdInput = "";
@@ -194,10 +224,32 @@ public class DashboardViewModel : ViewModelBase
 
     private string? _lastLuaFilePath;
 
-    public ICommand DownloadCommand { get; }
-    public ICommand OpenLuaFolderCommand { get; }
-    public ICommand InstallGameCommand { get; }
-    public ICommand SelectSearchResultCommand { get; }
+    // ── Featured Configs ──
+    private readonly SettingsService _settings;
+    private readonly LuaParserService _luaParser;
+    private readonly GameManagementService _gameMgmt;
+    private readonly DepotKeyService _depotKeyService;
+
+    public ObservableCollection<FeaturedGameEntry> FeaturedGames { get; } = new();
+
+    private bool _hasFeaturedGames;
+    public bool HasFeaturedGames
+    {
+        get => _hasFeaturedGames;
+        set => SetProperty(ref _hasFeaturedGames, value);
+    }
+
+    public ICommand PlayFeaturedGameCommand { get; }
+    public ICommand UpdateFeaturedGameCommand { get; }
+        public ICommand ViewAllCommand { get; }
+        public ICommand OpenLuaFolderQuickCommand { get; }
+        public ICommand UpdateAllGamesCommand { get; }
+        public ICommand ToggleAutoUpdateCommand { get; }
+        public ICommand ResetDashboardCommand { get; }
+        public ICommand DownloadCommand { get; }
+        public ICommand OpenLuaFolderCommand { get; }
+        public ICommand InstallGameCommand { get; }
+        public ICommand SelectSearchResultCommand { get; }
 
     // --- Search ---
     private void TriggerSearch(string query)
@@ -419,4 +471,228 @@ public class DashboardViewModel : ViewModelBase
             }
         }
     }
+
+    // ── Featured Configs ──
+
+    public async Task LoadFeaturedGamesAsync()
+    {
+        try
+        {
+            FeaturedGames.Clear();
+            HasFeaturedGames = false;
+
+            var luaPath = _settings.Settings.LuaOutputPath;
+            if (string.IsNullOrWhiteSpace(luaPath) || !Directory.Exists(luaPath))
+                return;
+
+            var entries = _luaParser.ScanLuaFolder(luaPath);
+            if (entries.Count == 0) return;
+
+            // Filter to installed only, take up to 4 newest
+            var installedEntries = new List<LibraryEntry>();
+            foreach (var e in entries.OrderByDescending(e => e.LastUpdated))
+            {
+                if (_gameMgmt.IsGameInstalled(e.AppId))
+                    installedEntries.Add(e);
+                if (installedEntries.Count >= 4)
+                    break;
+            }
+
+            if (installedEntries.Count == 0) return;
+
+            // Add entries to UI immediately with placeholder data
+            foreach (var entry in installedEntries)
+            {
+                FeaturedGames.Add(new FeaturedGameEntry
+                {
+                    AppId = entry.AppId,
+                    Name = entry.Name,
+                    HeaderImageUrl = entry.HeaderImageUrl,
+                    IsInstalled = true,
+                });
+            }
+            HasFeaturedGames = FeaturedGames.Count > 0;
+
+            // Fire API calls in parallel
+            var semaphore = new SemaphoreSlim(4);
+            var tasks = installedEntries.Select(async entry =>
+            {
+                var gameEntry = FeaturedGames.First(g => g.AppId == entry.AppId);
+                await semaphore.WaitAsync();
+                try
+                {
+                    // Fetch details
+                    var gameInfo = await _steamApi.GetAppDetailsAsync(entry.AppId);
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        if (gameInfo != null)
+                        {
+                            gameEntry.Name = gameInfo.Name;
+                            gameEntry.HeaderImageUrl = gameInfo.HeaderImageUrl;
+                        }
+                    });
+
+                    // Check update status
+                    if (entry.Depots.Count > 0)
+                    {
+                        try
+                        {
+                            var latest = await _steamApi.GetDepotsFromSteamCmdAsync(entry.AppId);
+                            foreach (var d in entry.Depots)
+                            {
+                                if (string.IsNullOrWhiteSpace(d.ManifestId)) continue;
+                                var match = latest.FirstOrDefault(l => l.DepotId == d.DepotId);
+                                if (match != null && !string.Equals(d.ManifestId, match.ManifestId, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    await Application.Current.Dispatcher.InvokeAsync(() => gameEntry.NeedsUpdate = true);
+                                    break;
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                finally { semaphore.Release(); }
+            });
+
+            await Task.WhenAll(tasks);
+        }
+        catch { }
+    }
+
+    private void PlayGame(FeaturedGameEntry? entry)
+    {
+        if (entry == null || !entry.IsInstalled) return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = $"steam://run/{entry.AppId}",
+                UseShellExecute = true
+            });
+        }
+        catch { }
+    }
+
+    private void OpenLuaFolderQuick()
+    {
+        var luaPath = _settings.Settings.LuaOutputPath;
+        if (!string.IsNullOrWhiteSpace(luaPath) && Directory.Exists(luaPath))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = luaPath,
+                UseShellExecute = true
+            });
+        }
+    }
+
+    private void ResetDashboard()
+    {
+        GameName = null;
+        GameImage = null;
+        GameDescription = null;
+        GameType = null;
+        GameReleaseDate = null;
+        EstimatedSize = null;
+        ResultSummary = null;
+        ShowMultiplayerWarning = false;
+        ShowSteamDbStats = false;
+        PlayerCountText = "";
+        ReviewScoreText = "";
+        IsComplete = false;
+        HasError = false;
+        AppIdInput = "";
+        _lastLuaFilePath = null;
+        CommandManager.InvalidateRequerySuggested();
+        _ = LoadFeaturedGamesAsync();
+    }
+
+    private void ToggleAutoUpdate()
+    {
+        _settings.Settings.AutoUpdateEnabled = !_settings.Settings.AutoUpdateEnabled;
+        _settings.Save();
+        OnPropertyChanged(nameof(AutoUpdateText));
+    }
+
+    public string AutoUpdateText => _settings.Settings.AutoUpdateEnabled
+        ? "Auto-update: ON"
+        : "Auto-update: OFF";
+
+    private async Task UpdateFeaturedGameAsync(FeaturedGameEntry? entry)
+    {
+        if (entry == null || entry.IsUpdating) return;
+        entry.IsUpdating = true;
+
+        try
+        {
+            var result = await _downloadService.DownloadGameAsync(entry.AppId,
+                onStatus: _ => { },
+                onProgress: pct => Application.Current?.Dispatcher.Invoke(() => entry.UpdateProgress = pct),
+                includeDlcs: true);
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    entry.NeedsUpdate = false;
+                    entry.IsInstalled = true;
+                }
+            });
+        }
+        catch { }
+        finally
+        {
+            entry.IsUpdating = false;
+        }
+    }
+}
+
+public class FeaturedGameEntry : System.ComponentModel.INotifyPropertyChanged
+{
+    public string AppId { get; set; } = "";
+
+    private string _name = "Unknown";
+    public string Name
+    {
+        get => _name;
+        set { _name = value; OnPropertyChanged(); }
+    }
+
+    private string _headerImageUrl = "";
+    public string HeaderImageUrl
+    {
+        get => _headerImageUrl;
+        set { _headerImageUrl = value; OnPropertyChanged(); }
+    }
+
+    public bool IsInstalled { get; set; }
+
+    private bool _needsUpdate;
+    public bool NeedsUpdate
+    {
+        get => _needsUpdate;
+        set { _needsUpdate = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShowUpdateButton)); }
+    }
+
+    public bool ShowUpdateButton => NeedsUpdate;
+
+    private bool _isUpdating;
+    public bool IsUpdating
+    {
+        get => _isUpdating;
+        set { _isUpdating = value; OnPropertyChanged(); }
+    }
+
+    private double _updateProgress;
+    public double UpdateProgress
+    {
+        get => _updateProgress;
+        set { _updateProgress = value; OnPropertyChanged(); }
+    }
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? name = null)
+        => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
 }

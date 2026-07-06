@@ -4,55 +4,44 @@
     <!-- ═══ Color Palette — AMOLED Black ═══ -->
     <Color x:Key="WindowBackgroundColor">#000000</Color>
     <Color x:Key="SidebarBackgroundColor">#020202</Color>
-    <Color x:Key="CardBackgroundColor">#0A0A0A</Color>
-    <Color x:Key="CardHoverColor">#141414</Color>
-    <Color x:Key="PrimaryAccentColor">#FF4500</Color>
-    <Color x:Key="PrimaryAccentHoverColor">#FF6347</Color>
-    <Color x:Key="PrimaryAccentDarkColor">#DC143C</Color>
-    <Color x:Key="PrimaryAccentGlowColor">#FF8C69</Color>
-    <Color x:Key="SecondaryAccentColor">#FFD700</Color>
-    <Color x:Key="SuccessColor">#00FF7F</Color>
-    <Color x:Key="SuccessDarkColor">#00CC66</Color>
-    <Color x:Key="WarningColor">#FFA500</Color>
-    <Color x:Key="ErrorColor">#FF3333</Color>
-    <Color x:Key="TextColor">#F0F0F0</Color>
-    <Color x:Key="MutedTextColor">#AAAAAA</Color>
-    <Color x:Key="DimTextColor">#666666</Color>
+    <Color x:Key="SurfaceBaseColor">#0A0A0A</Color>
+    <Color x:Key="SurfaceRaisedColor">#141414</Color>
+    <Color x:Key="SurfaceHoverColor">#1A1A1A</Color>
+    
+    <Color x:Key="PrimaryAccentColor">#7C5CFC</Color>
+    <Color x:Key="PrimaryAccentHoverColor">#9B82FD</Color>
+    <Color x:Key="PrimaryAccentMutedColor">#3D2E7A</Color>
+    <Color x:Key="PrimaryAccentGlowColor">#A78BFA</Color>
+    
+    <Color x:Key="SuccessColor">#34D399</Color>
+    <Color x:Key="WarningColor">#FBBF24</Color>
+    <Color x:Key="ErrorColor">#F87171</Color>
+    
+    <Color x:Key="TextColor">#EDEDEF</Color>
+    <Color x:Key="MutedTextColor">#9E9EA8</Color>
+    <Color x:Key="DimTextColor">#5C5C66</Color>
+    
     <Color x:Key="BorderColor">#1A1A1A</Color>
-    <Color x:Key="InputBackgroundColor">#050505</Color>
-    <Color x:Key="SidebarActiveColor">#111111</Color>
 
+    <!-- ═══ Solid Brushes (must override Dark.xaml brushes for themes to apply) ═══ -->
     <SolidColorBrush x:Key="WindowBackground" Color="{StaticResource WindowBackgroundColor}" />
     <SolidColorBrush x:Key="SidebarBackground" Color="{StaticResource SidebarBackgroundColor}" />
-    <SolidColorBrush x:Key="CardBackground" Color="{StaticResource CardBackgroundColor}" />
-    <SolidColorBrush x:Key="CardHover" Color="{StaticResource CardHoverColor}" />
+    <SolidColorBrush x:Key="SurfaceBase" Color="{StaticResource SurfaceBaseColor}" />
+    <SolidColorBrush x:Key="SurfaceRaised" Color="{StaticResource SurfaceRaisedColor}" />
+    <SolidColorBrush x:Key="SurfaceHover" Color="{StaticResource SurfaceHoverColor}" />
+    
     <SolidColorBrush x:Key="PrimaryAccent" Color="{StaticResource PrimaryAccentColor}" />
     <SolidColorBrush x:Key="PrimaryAccentHover" Color="{StaticResource PrimaryAccentHoverColor}" />
-    <SolidColorBrush x:Key="PrimaryAccentDark" Color="{StaticResource PrimaryAccentDarkColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentMuted" Color="{StaticResource PrimaryAccentMutedColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentGlow" Color="{StaticResource PrimaryAccentGlowColor}" />
+    
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
-    <SolidColorBrush x:Key="SuccessDarkBrush" Color="{StaticResource SuccessDarkColor}" />
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+    
     <SolidColorBrush x:Key="Text" Color="{StaticResource TextColor}" />
     <SolidColorBrush x:Key="MutedText" Color="{StaticResource MutedTextColor}" />
     <SolidColorBrush x:Key="DimText" Color="{StaticResource DimTextColor}" />
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
-    <SolidColorBrush x:Key="InputBackground" Color="{StaticResource InputBackgroundColor}" />
-
-    <!-- Gradient Brushes -->
-    <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FF4500" Offset="0"/>
-        <GradientStop Color="#FFD700" Offset="1"/>
-    </LinearGradientBrush>
-
-    <LinearGradientBrush x:Key="SidebarGradient" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#020202" Offset="0"/>
-        <GradientStop Color="#000000" Offset="1"/>
-    </LinearGradientBrush>
-
-    <LinearGradientBrush x:Key="CardGlowBorder" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#1A1A1A" Offset="0"/>
-        <GradientStop Color="#331400" Offset="0.5"/>
-        <GradientStop Color="#1A1A1A" Offset="1"/>
-    </LinearGradientBrush>
+    <SolidColorBrush x:Key="InputBackground" Color="{StaticResource SurfaceBaseColor}" />
 </ResourceDictionary>

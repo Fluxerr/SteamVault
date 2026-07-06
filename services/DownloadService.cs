@@ -100,7 +100,7 @@ public class DownloadService
             game.AppAccessToken = _depotKeyService.GetAppAccessToken(appId);
             onProgress?.Invoke(70);
 
-            var usableDepots = depots.Where(d => !string.IsNullOrWhiteSpace(d.ManifestId) && !d.IsDlcDepot).ToList();
+            var usableDepots = depots.Where(d => !string.IsNullOrWhiteSpace(d.ManifestId) && !string.IsNullOrWhiteSpace(d.DecryptionKey) && !d.IsDlcDepot).ToList();
 
             if (usableDepots.Count == 0)
             {
@@ -154,9 +154,12 @@ public class DownloadService
                     LogLine($"  Fetching depot data for {totalDlcs} DLC(s)...");
                     onProgress?.Invoke(72);
                     var dlcProcessedTotal = 0;
+                    var dlcLock = new object();
+                    var semaphore = new SemaphoreSlim(10); // Run up to 10 DLC fetches concurrently
 
-                    foreach (var dlcAppId in allDlcAppIds)
+                    var dlcTasks = allDlcAppIds.Select(async dlcAppId =>
                     {
+                        await semaphore.WaitAsync();
                         try
                         {
                             string dlcName = dlcAppId;
@@ -167,8 +170,7 @@ public class DownloadService
                             var existingDlcDepots = depots
                                 .Where(d => d.DlcAppId == dlcAppId && !string.IsNullOrWhiteSpace(d.ManifestId))
                                 .ToList();
-                            LogLine($"    Source A (parent depots): {existingDlcDepots.Count}");
-
+                            
                             List<DepotInfo> dlcDepotsToUse;
                             if (existingDlcDepots.Count > 0)
                             {
@@ -180,7 +182,6 @@ public class DownloadService
                                 try { fetched = await _steamApi.GetDepotsFromSteamCmdAsync(dlcAppId); }
                                 catch { fetched = new List<DepotInfo>(); }
                                 dlcDepotsToUse = fetched.Where(d => !string.IsNullOrWhiteSpace(d.ManifestId)).ToList();
-                                LogLine($"    Source B (DLC own steamcmd): {fetched.Count} total, {dlcDepotsToUse.Count} with manifest");
                             }
 
                             // Build depot list (may be empty for entitlement-only DLCs)
@@ -194,7 +195,12 @@ public class DownloadService
                                     var key = await _depotKeyService.GetDepotKeyWithFallbackAsync(depot.DepotId, _steamApi, appIdFallback: dlcAppId);
                                     if (!string.IsNullOrWhiteSpace(key)) { depot.DecryptionKey = key; keysFound++; }
                                 }
-                                LogLine($"    Keys: {keysFound}/{dlcDepotsToUse.Count}");
+
+                                if (keysFound < dlcDepotsToUse.Count)
+                                {
+                                    LogLine($"    ✗ Skipped {dlcName}: Missing decryption keys for {dlcDepotsToUse.Count - keysFound} depot(s).");
+                                    return;
+                                }
 
                                 usableDepotEntries = dlcDepotsToUse
                                     .Where(d => !string.IsNullOrWhiteSpace(d.ManifestId) || !string.IsNullOrWhiteSpace(d.DecryptionKey))
@@ -203,19 +209,23 @@ public class DownloadService
                             }
 
                             // ALWAYS add the DLC — entitlement/unlock DLCs with no depots still need addappid()
-                            dlcEntries.Add(new DlcLuaEntry { AppId = dlcAppId, Name = dlcName, Depots = usableDepotEntries });
-                            dlcProcessedTotal++;
-
-                            if (usableDepotEntries.Count > 0)
-                                LogLine($"    ✓ Added with {usableDepotEntries.Count} depot(s)");
-                            else
-                                LogLine($"    ✓ Added (entitlement-only, no depots) — registered via addappid({dlcAppId})");
+                            lock (dlcLock)
+                            {
+                                dlcEntries.Add(new DlcLuaEntry { AppId = dlcAppId, Name = dlcName, Depots = usableDepotEntries });
+                                dlcProcessedTotal++;
+                            }
                         }
                         catch (Exception ex)
                         {
-                            LogLine($"    ✗ Failed: {ex.Message}");
+                            LogLine($"    ✗ Failed {dlcAppId}: {ex.Message}");
                         }
-                    }
+                        finally
+                        {
+                            semaphore.Release();
+                        }
+                    });
+
+                    await Task.WhenAll(dlcTasks);
 
                     dlcProcessed = dlcProcessedTotal;
                     LogLine($"  Result: {dlcProcessed}/{totalDlcs} DLC(s) added to Lua");
@@ -231,8 +241,12 @@ public class DownloadService
             onProgress?.Invoke(85);
 
             var luaEntries = usableDepots.Select(d => new DepotLuaEntry { DepotId = d.DepotId, DecryptionKey = d.DecryptionKey, ManifestId = d.ManifestId }).ToList();
-            LogLine($"Generating Lua — base depots: {luaEntries.Count}, DLC entries: {dlcEntries.Count}, AppTicket: {(game.AppTicket != null ? "yes" : "no")}, ETicket: {(game.ETicket != null ? "yes" : "no")}");
-            var luaFilePath = _luaGenerator.GenerateLuaFile(appId, game.Name, luaEntries, luaOutputPath, game.AppAccessToken, dlcEntries.Count > 0 ? dlcEntries : null, game.AppTicket, game.ETicket);
+
+            // Resolve the app's own decryption key (for games where AppID == a depot, e.g. TEKKEN 8 1778820)
+            var appDecryptionKey = await _depotKeyService.GetDepotKeyWithFallbackAsync(appId, _steamApi, appIdFallback: appId);
+
+            LogLine($"Generating Lua — base depots: {luaEntries.Count}, DLC entries: {dlcEntries.Count}, AppKey: {(appDecryptionKey != null ? "yes" : "no")}, AppTicket: {(game.AppTicket != null ? "yes" : "no")}, ETicket: {(game.ETicket != null ? "yes" : "no")}");
+            var luaFilePath = _luaGenerator.GenerateLuaFile(appId, game.Name, luaEntries, luaOutputPath, game.AppAccessToken, dlcEntries.Count > 0 ? dlcEntries : null, game.AppTicket, game.ETicket, appDecryptionKey);
             onProgress?.Invoke(90);
 
             // Step 6: Manifest download (best-effort)

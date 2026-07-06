@@ -78,7 +78,13 @@ public class MainViewModel : ViewModelBase
     {
         _settingsService = settingsService;
 
-        DashboardVM = new DashboardViewModel(downloadService, searchService, steamApi);
+        DashboardVM = new DashboardViewModel(downloadService, searchService, steamApi, luaParser, settingsService, gameMgmtService, depotKeyService);
+        DashboardVM.NavigateToLibrary = () => CurrentView = MyGamesVM;
+        DashboardVM.NavigateToLibraryAndUpdate = () =>
+        {
+            CurrentView = MyGamesVM;
+            _ = MyGamesVM.RefreshAsync();
+        };
         SettingsVM = new SettingsViewModel(settingsService, depotKeyService, exportService);
         MyGamesVM = new MyGamesViewModel(settingsService, steamApi, depotKeyService, luaParser, downloadService, gameMgmtService);
         DiscoverVM = new DiscoverViewModel(steamApi, downloadService);

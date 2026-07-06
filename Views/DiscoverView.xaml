@@ -4,351 +4,269 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:viewmodels="clr-namespace:SteamVault.ViewModels"
+             xmlns:converters="clr-namespace:SteamVault.Converters"
              d:DataContext="{d:DesignInstance Type=viewmodels:DiscoverViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="680" d:DesignWidth="860">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <converters:InvertibleBoolToVisibilityConverter x:Key="BoolToVis" />
+        
+        <DataTemplate x:Key="DiscoverCardTemplate">
+            <Border x:Name="DiscoverCard" Margin="6" Background="{DynamicResource SurfaceBase}" CornerRadius="12" ClipToBounds="True" Cursor="Hand" MouseLeftButtonDown="DiscoverCard_Click" RenderTransformOrigin="0.5,0.5" TextOptions.TextFormattingMode="Ideal" TextOptions.TextHintingMode="Animated">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Border.RenderTransform>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <Border Grid.Row="0" CornerRadius="12,12,0,0" ClipToBounds="True">
+                        <Grid>
+                            <Border Background="{DynamicResource SurfaceRaised}" Height="120"/>
+                            <Image Source="{Binding ImageUrl}" Stretch="UniformToFill" Height="120" Style="{DynamicResource FadeInImage}"/>
+                            
+                            <!-- Gradient scrim -->
+                            <Border VerticalAlignment="Bottom" Height="50">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#00000000" Offset="0"/>
+                                        <GradientStop Color="#CC1A1A1F" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    
+                    <StackPanel Grid.Row="1" Margin="14,10,14,14">
+                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" Margin="0,0,0,8"/>
+                        <Border x:Name="IdPill" Background="{DynamicResource SurfaceHover}" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Opacity="0">
+                            <TextBlock Text="{Binding AppId, StringFormat='ID: {0}'}" Style="{DynamicResource MonoText}" FontSize="11" Foreground="{DynamicResource DimText}"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <Trigger SourceName="DiscoverCard" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="DiscoverCard" Property="Background" Value="{DynamicResource SurfaceRaised}"/>
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="DiscoverCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.02" Duration="0:0:0.15"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="DiscoverCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.02" Duration="0:0:0.15"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="IdPill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="DiscoverCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
+                                <DoubleAnimation Storyboard.TargetName="DiscoverCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
+                                <DoubleAnimation Storyboard.TargetName="IdPill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="40,32,40,40">
+        <Grid Margin="48,40,48,40">
             <!-- ═══ BROWSE GRID ═══ -->
             <StackPanel Visibility="{Binding ShowBrowseGrid, Converter={StaticResource BoolToVis}}">
                 <!-- Header -->
-                <StackPanel Margin="0,0,0,16" Orientation="Horizontal">
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="Discover" Style="{StaticResource TitleText}"/>
-                        <TextBlock Text="Browse trending games, top sellers, and new releases from Steam." 
-                                   Style="{StaticResource SubtitleText}" Margin="0,-12,0,0"/>
+                        <TextBlock Text="Discover" Style="{DynamicResource TitleText}"/>
+                        <TextBlock Text="Browse trending games, top sellers, and new releases from Steam." Style="{DynamicResource SubtitleText}"/>
                     </StackPanel>
-                    <Button Content="🔄  Refresh" Command="{Binding RefreshCommand}" 
-                            Width="120" Height="40" HorizontalAlignment="Right" Margin="0,0,0,0"
-                            VerticalAlignment="Top"/>
+                    <Button Grid.Column="1" Command="{Binding RefreshCommand}" Style="{DynamicResource GhostButton}" VerticalAlignment="Top">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource DimText}" FontSize="13" Margin="0,0,0,24"/>
+
+                <!-- Loading State -->
+                <StackPanel Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" HorizontalAlignment="Center" Margin="0,48,0,0">
+                    <TextBlock Text="&#xE896;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="24" Foreground="{DynamicResource PrimaryAccent}" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                    <TextBlock Text="Loading games from Steam..." Foreground="{DynamicResource MutedText}" FontSize="14" HorizontalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Status message -->
-                <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource DimText}" 
-                           FontSize="12" Margin="0,0,0,16"/>
+                <!-- Trending -->
+                <StackPanel Margin="0,0,0,32">
+                    <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding TrendingGames.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <Border Width="4" Height="16" CornerRadius="2" Background="{DynamicResource PrimaryAccent}" Margin="0,0,12,0"/>
+                        <TextBlock Text="Trending and Featured" Style="{DynamicResource SectionHeader}" Margin="0"/>
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding TrendingGames}" ItemTemplate="{StaticResource DiscoverCardTemplate}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
 
-                        <!-- Loading Shimmer -->
-                        <StackPanel Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
-                            <ContentControl Style="{StaticResource ShimmerPlaceholder}" Height="200" Margin="0,0,0,16"/>
-                            <ContentControl Style="{StaticResource ShimmerPlaceholder}" Height="200" Margin="0,0,0,16"/>
-                        </StackPanel>
+                <!-- Top Sellers -->
+                <StackPanel Margin="0,0,0,32">
+                    <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding TopSellers.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <Border Width="4" Height="16" CornerRadius="2" Background="{DynamicResource PrimaryAccent}" Margin="0,0,12,0"/>
+                        <TextBlock Text="Top Sellers" Style="{DynamicResource SectionHeader}" Margin="0"/>
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding TopSellers}" ItemTemplate="{StaticResource DiscoverCardTemplate}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
 
-                        <!-- Trending -->
-                        <TextBlock Text="🔥  Trending &amp; Featured" FontWeight="Bold" FontSize="18" Margin="0,0,0,16"
-                                   Visibility="{Binding TrendingGames.Count, Converter={StaticResource BoolToVis}}"/>
-                        <ItemsControl ItemsSource="{Binding TrendingGames}" Margin="0,0,0,0">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Columns="3"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border x:Name="DiscoverCard" Margin="6" 
-                                            Background="{StaticResource CardBackground}" 
-                                            CornerRadius="14" Padding="0" Cursor="Hand"
-                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                            MouseLeftButtonDown="DiscoverCard_Click">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="110"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <Border Grid.Row="0" CornerRadius="13,13,0,0" ClipToBounds="True">
-                                                <Image Source="{Binding ImageUrl}" 
-                                                       Stretch="UniformToFill" 
-                                                       HorizontalAlignment="Center"
-                                                       Style="{StaticResource FadeInImage}"/>
-                                            </Border>
-                                            <StackPanel Grid.Row="1" Margin="14,12,14,14">
-                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
-                                                <Border Background="#1E1E30" CornerRadius="6" Padding="8,3"
-                                                        HorizontalAlignment="Left">
-                                                    <TextBlock Text="{Binding AppId, StringFormat='ID: {0}'}" 
-                                                               FontSize="11" Foreground="{StaticResource DimText}"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                    <DataTemplate.Triggers>
-                                        <Trigger SourceName="DiscoverCard" Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="DiscoverCard" Property="BorderBrush" Value="{StaticResource PrimaryAccent}"/>
-                                            <Setter TargetName="DiscoverCard" Property="Background" Value="{StaticResource CardHover}"/>
-                                        </Trigger>
-                                    </DataTemplate.Triggers>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                <!-- New Releases -->
+                <StackPanel Margin="0,0,0,32">
+                    <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding NewReleases.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <Border Width="4" Height="16" CornerRadius="2" Background="{DynamicResource PrimaryAccent}" Margin="0,0,12,0"/>
+                        <TextBlock Text="New Releases" Style="{DynamicResource SectionHeader}" Margin="0"/>
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding NewReleases}" ItemTemplate="{StaticResource DiscoverCardTemplate}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
 
-                        <!-- Top Sellers -->
-                        <TextBlock Text="🏆  Top Sellers" FontWeight="Bold" FontSize="18" Margin="0,24,0,16"
-                                   Visibility="{Binding TopSellers.Count, Converter={StaticResource BoolToVis}}"/>
-                        <ItemsControl ItemsSource="{Binding TopSellers}" Margin="0,0,0,0">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Columns="3"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border x:Name="DiscoverCard" Margin="6" 
-                                            Background="{StaticResource CardBackground}" 
-                                            CornerRadius="14" Padding="0" Cursor="Hand"
-                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                            MouseLeftButtonDown="DiscoverCard_Click">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="110"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <Border Grid.Row="0" CornerRadius="13,13,0,0" ClipToBounds="True">
-                                                <Image Source="{Binding ImageUrl}" 
-                                                       Stretch="UniformToFill" 
-                                                       HorizontalAlignment="Center"
-                                                       Style="{StaticResource FadeInImage}"/>
-                                            </Border>
-                                            <StackPanel Grid.Row="1" Margin="14,12,14,14">
-                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
-                                                <Border Background="#1E1E30" CornerRadius="6" Padding="8,3"
-                                                        HorizontalAlignment="Left">
-                                                    <TextBlock Text="{Binding AppId, StringFormat='ID: {0}'}" 
-                                                               FontSize="11" Foreground="{StaticResource DimText}"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                    <DataTemplate.Triggers>
-                                        <Trigger SourceName="DiscoverCard" Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="DiscoverCard" Property="BorderBrush" Value="{StaticResource PrimaryAccent}"/>
-                                            <Setter TargetName="DiscoverCard" Property="Background" Value="{StaticResource CardHover}"/>
-                                        </Trigger>
-                                    </DataTemplate.Triggers>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <!-- New Releases -->
-                        <TextBlock Text="🆕  New Releases" FontWeight="Bold" FontSize="18" Margin="0,24,0,16"
-                                   Visibility="{Binding NewReleases.Count, Converter={StaticResource BoolToVis}}"/>
-                        <ItemsControl ItemsSource="{Binding NewReleases}" Margin="0,0,0,0">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Columns="3"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border x:Name="DiscoverCard" Margin="6" 
-                                            Background="{StaticResource CardBackground}" 
-                                            CornerRadius="14" Padding="0" Cursor="Hand"
-                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                            MouseLeftButtonDown="DiscoverCard_Click">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="110"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <Border Grid.Row="0" CornerRadius="13,13,0,0" ClipToBounds="True">
-                                                <Image Source="{Binding ImageUrl}" 
-                                                       Stretch="UniformToFill" 
-                                                       HorizontalAlignment="Center"
-                                                       Style="{StaticResource FadeInImage}"/>
-                                            </Border>
-                                            <StackPanel Grid.Row="1" Margin="14,12,14,14">
-                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
-                                                <Border Background="#1E1E30" CornerRadius="6" Padding="8,3"
-                                                        HorizontalAlignment="Left">
-                                                    <TextBlock Text="{Binding AppId, StringFormat='ID: {0}'}" 
-                                                               FontSize="11" Foreground="{StaticResource DimText}"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                    <DataTemplate.Triggers>
-                                        <Trigger SourceName="DiscoverCard" Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="DiscoverCard" Property="BorderBrush" Value="{StaticResource PrimaryAccent}"/>
-                                            <Setter TargetName="DiscoverCard" Property="Background" Value="{StaticResource CardHover}"/>
-                                        </Trigger>
-                                    </DataTemplate.Triggers>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <!-- Free to Play -->
-                        <TextBlock Text="🎁  Free to Play" FontWeight="Bold" FontSize="18" Margin="0,24,0,16"
-                                   Visibility="{Binding FreeGames.Count, Converter={StaticResource BoolToVis}}"/>
-                        <ItemsControl ItemsSource="{Binding FreeGames}" Margin="0,0,0,0">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Columns="3"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border x:Name="DiscoverCard" Margin="6" 
-                                            Background="{StaticResource CardBackground}" 
-                                            CornerRadius="14" Padding="0" Cursor="Hand"
-                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                            MouseLeftButtonDown="DiscoverCard_Click">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="110"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <Border Grid.Row="0" CornerRadius="13,13,0,0" ClipToBounds="True">
-                                                <Image Source="{Binding ImageUrl}" 
-                                                       Stretch="UniformToFill" 
-                                                       HorizontalAlignment="Center"
-                                                       Style="{StaticResource FadeInImage}"/>
-                                            </Border>
-                                            <StackPanel Grid.Row="1" Margin="14,12,14,14">
-                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
-                                                <Border Background="#1E1E30" CornerRadius="6" Padding="8,3"
-                                                        HorizontalAlignment="Left">
-                                                    <TextBlock Text="{Binding AppId, StringFormat='ID: {0}'}" 
-                                                               FontSize="11" Foreground="{StaticResource DimText}"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                    <DataTemplate.Triggers>
-                                        <Trigger SourceName="DiscoverCard" Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="DiscoverCard" Property="BorderBrush" Value="{StaticResource PrimaryAccent}"/>
-                                            <Setter TargetName="DiscoverCard" Property="Background" Value="{StaticResource CardHover}"/>
-                                        </Trigger>
-                                    </DataTemplate.Triggers>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                <!-- Free to Play -->
+                <StackPanel>
+                    <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding FreeGames.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <Border Width="4" Height="16" CornerRadius="2" Background="{DynamicResource PrimaryAccent}" Margin="0,0,12,0"/>
+                        <TextBlock Text="Free to Play" Style="{DynamicResource SectionHeader}" Margin="0"/>
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding FreeGames}" ItemTemplate="{StaticResource DiscoverCardTemplate}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
             </StackPanel>
 
             <!-- ═══ GAME DETAIL VIEW ═══ -->
-            <Border Visibility="{Binding ShowGameDetail, Converter={StaticResource BoolToVis}}"
-                    Background="{StaticResource CardBackground}" CornerRadius="14" Padding="28"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+            <Border Visibility="{Binding ShowGameDetail, Converter={StaticResource BoolToVis}}" Padding="0" ClipToBounds="True">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource SurfaceCard}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShowGameDetail}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,30,0,0" To="0" Duration="0:0:0.35">
+                                                <ThicknessAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ThicknessAnimation.EasingFunction>
+                                            </ThicknessAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="280"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="220"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <!-- Game Image -->
-                    <Border Grid.Column="0" CornerRadius="10" ClipToBounds="True" VerticalAlignment="Top">
-                        <Image Source="{Binding DetailGameImage}" Stretch="Uniform" Width="280"
-                               Style="{StaticResource FadeInImage}"/>
-                    </Border>
-
-                    <!-- Detail Info -->
-                    <StackPanel Grid.Column="1" Margin="28,0,0,0">
-                        <!-- Back button -->
-                        <Button Content="←  Back to Browse" Command="{Binding BackToDiscoverCommand}"
-                                Style="{StaticResource GhostButton}" HorizontalAlignment="Left"
-                                Padding="14,8" Margin="0,0,0,16" FontSize="12"/>
-
-                        <TextBlock Text="{Binding DetailGameName}" FontSize="24" FontWeight="Bold" 
-                                   TextWrapping="Wrap" Margin="0,0,0,10"/>
-
-                        <!-- Multiplayer Warning (with pulsing amber orb) -->
-                        <Border CornerRadius="6" Padding="10,5" Margin="0,0,0,10"
-                                BorderBrush="#8B5A00" BorderThickness="1"
-                                Visibility="{Binding DetailShowMultiplayerWarning, Converter={StaticResource BoolToVis}}">
+                    <!-- Header Banner -->
+                    <Grid Grid.Row="0">
+                        <Border Background="{DynamicResource SurfaceRaised}"/>
+                        <Image Source="{Binding DetailGameImage}" Stretch="UniformToFill" Style="{DynamicResource FadeInImage}"/>
+                        <Border>
                             <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#1A1500" Offset="0"/>
-                                    <GradientStop Color="#221800" Offset="1"/>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#33000000" Offset="0"/>
+                                    <GradientStop Color="#F21A1A1F" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.Background>
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Style="{StaticResource PulsingDotAmber}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="SINGLEPLAYER ONLY — Multiplayer features unavailable in cracked copies" 
-                                           Foreground="#FFB84D" FontSize="12" FontWeight="SemiBold"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
                         </Border>
-
-                        <!-- Badges Row -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                            <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
-                                <TextBlock Text="{Binding DetailAppId, StringFormat='ID: {0}'}" 
-                                           FontSize="12" Foreground="{StaticResource MutedText}"/>
-                            </Border>
-                            <Border Background="#1E1E30" CornerRadius="6" Padding="10,4" Margin="0,0,8,0">
-                                <TextBlock Text="{Binding DetailType}" FontSize="12" Foreground="{StaticResource MutedText}"/>
-                            </Border>
-                            <Border Background="#1E1E30" CornerRadius="6" Padding="10,4">
-                                <TextBlock Text="{Binding DetailReleaseDate}" FontSize="12" Foreground="{StaticResource MutedText}"/>
-                            </Border>
+                        <StackPanel VerticalAlignment="Bottom" Margin="40,0,40,24">
+                            <Button Command="{Binding BackToDiscoverCommand}" Style="{DynamicResource GhostButton}" HorizontalAlignment="Left" Padding="8,4" Margin="-8,0,0,16" BorderThickness="0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE72B;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Back to Browse" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="{Binding DetailGameName}" FontSize="28" FontWeight="Bold" TextWrapping="Wrap"/>
                         </StackPanel>
+                    </Grid>
 
-                        <!-- Description -->
-                        <TextBlock Text="{Binding DetailDescription}" TextWrapping="Wrap" FontSize="13" 
-                                   Foreground="{StaticResource MutedText}" MaxHeight="60" 
-                                   TextTrimming="CharacterEllipsis" Margin="0,0,0,12"/>
+                    <!-- Content Area -->
+                    <Grid Grid.Row="1" Margin="40,24,40,40">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="280"/>
+                        </Grid.ColumnDefinitions>
 
-                        <!-- SteamDB Stats -->
-                        <StackPanel Margin="0,0,0,14" Visibility="{Binding DetailHasStats, Converter={StaticResource BoolToVis}}">
-                            <Border CornerRadius="6" Padding="10,6" Margin="0,0,0,4"
-                                    Background="#1A1A2E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                        <!-- Left Info -->
+                        <StackPanel Grid.Column="0" Margin="0,0,40,0">
+                            <!-- Multiplayer Warning -->
+                            <Border CornerRadius="8" Padding="12,10" Margin="0,0,0,24" Background="#1A2B200A" Visibility="{Binding DetailShowMultiplayerWarning, Converter={StaticResource BoolToVis}}">
                                 <StackPanel Orientation="Horizontal">
-                                    <Ellipse Style="{StaticResource PulsingDotGreen}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="{Binding DetailPlayerCount}" FontSize="12" Foreground="{StaticResource MutedText}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="&#xE7BA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource WarningBrush}" Margin="0,0,12,0" VerticalAlignment="Center" FontSize="14"/>
+                                    <TextBlock Text="Singleplayer only - multiplayer features unavailable" Foreground="{DynamicResource WarningBrush}" FontSize="13" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
-                            <Border CornerRadius="6" Padding="10,6"
-                                    Background="#1A1A2E" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="⭐" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="{Binding DetailReviewScore}" FontSize="12" Foreground="{StaticResource MutedText}"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
 
-                        <!-- Status + Progress -->
-                        <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,14">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="#141420"/>
-                                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-                                    <Setter Property="BorderThickness" Value="1"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsDownloadComplete}" Value="True">
-                                            <Setter Property="BorderBrush" Value="#1A5A30"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Style="{StaticResource PulsingDot}" 
-                                             Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"
-                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="{Binding DetailStatusMessage}" TextWrapping="Wrap" FontSize="13"
-                                               Foreground="{StaticResource MutedText}"/>
+                            <WrapPanel Margin="0,0,0,20">
+                                <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                    <TextBlock Text="{Binding DetailAppId, StringFormat='ID: {0}'}" Style="{DynamicResource MonoText}" FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                </Border>
+                                <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                    <TextBlock Text="{Binding DetailType}" FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                </Border>
+                                <Border Background="{DynamicResource SurfaceHover}" CornerRadius="6" Padding="10,4" Margin="0,0,8,8">
+                                    <TextBlock Text="{Binding DetailReleaseDate}" FontSize="12" Foreground="{DynamicResource MutedText}"/>
+                                </Border>
+                            </WrapPanel>
+
+                            <TextBlock Text="{Binding DetailDescription}" TextWrapping="Wrap" FontSize="14" LineHeight="24" Foreground="{DynamicResource MutedText}" Margin="0,0,0,32"/>
+
+                            <!-- Stats -->
+                            <StackPanel Visibility="{Binding DetailHasStats, Converter={StaticResource BoolToVis}}" Orientation="Horizontal">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,32,0">
+                                    <TextBlock Text="&#xE716;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DetailPlayerCount}" FontSize="13" Foreground="{DynamicResource MutedText}" VerticalAlignment="Center"/>
                                 </StackPanel>
-                                <ProgressBar Value="{Binding DetailProgress}" Maximum="100" Height="6" Margin="0,12,0,0"
-                                             Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE735;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource DimText}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DetailReviewScore}" FontSize="13" Foreground="{DynamicResource MutedText}" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
-                        </Border>
-
-                        <!-- Action Buttons -->
-                        <StackPanel Orientation="Horizontal">
-                            <Button Content="⬇  Download" 
-                                    Command="{Binding DownloadDetailGameCommand}"
-                                    HorizontalAlignment="Left" Padding="18,10" Margin="0,0,12,0"/>
-                            <Button Content="▶  Install via Steam" 
-                                    Command="{Binding InstallDetailGameCommand}"
-                                    Style="{StaticResource GhostButton}"
-                                    HorizontalAlignment="Left" Padding="18,10"/>
                         </StackPanel>
-                    </StackPanel>
+
+                        <!-- Right Actions -->
+                        <StackPanel Grid.Column="1">
+                            <!-- Download State -->
+                            <Border CornerRadius="12" Padding="20" Margin="0,0,0,24" Background="{DynamicResource SurfaceRaised}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12" Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="&#xE896;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DetailStatusMessage}" TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource MutedText}"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding DetailStatusMessage}" TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource SuccessBrush}" Visibility="{Binding IsDownloadComplete, Converter={StaticResource BoolToVis}}"/>
+                                    <TextBlock Text="{Binding DetailStatusMessage}" TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource MutedText}" Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}, ConverterParameter=invert}" Margin="0,0,0,12"/>
+                                    
+                                    <ProgressBar Value="{Binding DetailProgress}" Maximum="100" Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Button Content="Download Config" Command="{Binding DownloadDetailGameCommand}" Margin="0,0,0,12"/>
+                            <Button Content="Install via Steam" Command="{Binding InstallDetailGameCommand}" Style="{DynamicResource GhostButton}"/>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>

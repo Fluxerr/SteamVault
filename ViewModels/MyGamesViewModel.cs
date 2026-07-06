@@ -307,7 +307,7 @@ public class MyGamesViewModel : ViewModelBase
             }
             foreach (var latest in latestDepots)
             {
-                if (string.IsNullOrWhiteSpace(latest.ManifestId)) continue;
+                if (string.IsNullOrWhiteSpace(latest.ManifestId) || string.IsNullOrWhiteSpace(latest.DecryptionKey)) continue;
                 if (!entry.Depots.Any(d => d.DepotId == latest.DepotId)) { anyOutdated = true; }
             }
 
@@ -320,18 +320,25 @@ public class MyGamesViewModel : ViewModelBase
         }
     }
 
-    private async Task UpdateGameAsync(LibraryEntry? entry)
+    private async Task UpdateGameAsync(LibraryEntry? entry, bool? includeDlcsParam = null)
     {
         if (entry == null || entry.IsUpdating) return;
 
         // Ask user if they want to include DLCs
         bool includeDlcs = false;
-        var dlcChoice = System.Windows.MessageBox.Show(
-            "Do you want to include all available DLCs for this game?",
-            "Include DLCs?",
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Question);
-        includeDlcs = dlcChoice == System.Windows.MessageBoxResult.Yes;
+        if (includeDlcsParam.HasValue)
+        {
+            includeDlcs = includeDlcsParam.Value;
+        }
+        else
+        {
+            var dlcChoice = System.Windows.MessageBox.Show(
+                "Do you want to include all available DLCs for this game?",
+                "Include DLCs?",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+            includeDlcs = dlcChoice == System.Windows.MessageBoxResult.Yes;
+        }
 
         entry.IsUpdating = true; entry.UpdateProgress = 0;
         CommandManager.InvalidateRequerySuggested();
@@ -370,13 +377,42 @@ public class MyGamesViewModel : ViewModelBase
         if (gamesToUpdate.Count == 0) return;
         IsUpdatingAll = true;
         StatusMessage = $"Starting batch update for {gamesToUpdate.Count} game(s)...";
+        // Prompt once for all games
+        var dlcChoice = System.Windows.MessageBox.Show(
+            "Do you want to include all available DLCs for these games?",
+            "Include DLCs?",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question);
+        bool includeDlcs = dlcChoice == System.Windows.MessageBoxResult.Yes;
+
         try
         {
-            for (int i = 0; i < gamesToUpdate.Count; i++)
+            var semaphore = new SemaphoreSlim(4); // Run 4 updates concurrently
+            var completed = 0;
+            var lockObj = new object();
+
+            var tasks = gamesToUpdate.Select(async game =>
             {
-                StatusMessage = $"[Batch {i + 1}/{gamesToUpdate.Count}] Updating {gamesToUpdate[i].Name}...";
-                await UpdateGameAsync(gamesToUpdate[i]);
-            }
+                await semaphore.WaitAsync();
+                try
+                {
+                    // UpdateGameAsync will update the individual game's status
+                    await UpdateGameAsync(game, includeDlcs);
+                    
+                    lock (lockObj)
+                    {
+                        completed++;
+                        Application.Current?.Dispatcher.InvokeAsync(() => 
+                            StatusMessage = $"[Batch {completed}/{gamesToUpdate.Count}] Updating in parallel...");
+                    }
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks);
             StatusMessage = "✓ All outdated games updated successfully!";
         }
         catch (Exception ex) { StatusMessage = $"Batch update error: {ex.Message}"; }

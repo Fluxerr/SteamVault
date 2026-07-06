@@ -3,58 +3,49 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:viewmodels="clr-namespace:SteamVault.ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewmodels:SettingsViewModel}"
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="900">
-    <Grid Margin="40,32,40,40">
+             d:DesignHeight="800" d:DesignWidth="900">
+
+    <Grid Margin="48,40,48,40">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,8">
-            <TextBlock Text="Settings" Style="{StaticResource TitleText}"/>
-            <TextBlock Text="Configure directory paths, database synchronization, and background operations." 
-                       Style="{StaticResource SubtitleText}" Margin="0,-12,0,24"/>
+        <StackPanel Grid.Row="0" Margin="0,0,0,32">
+            <TextBlock Text="Settings" Style="{DynamicResource TitleText}"/>
+            <TextBlock Text="Manage background services, theme options, local directories, and the decryption key database." 
+                       Style="{DynamicResource SubtitleText}"/>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,16,0">
 
-                <!-- Background Operations & Auto Updates -->
-                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                <Border Style="{DynamicResource SurfaceCard}" Margin="0,0,0,24" Padding="32,24">
                     <StackPanel>
-                        <TextBlock Text="⚡  Background &amp; Startup Options" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
-                        <TextBlock Text="Set SteamVault to keep your games constantly up-to-date in the background." 
-                                   Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,20"/>
-
-                        <Grid Margin="0,0,0,10">
+                        <!-- Background Operations -->
+                        <TextBlock Text="Background and Startup" Style="{DynamicResource SectionHeader}" Margin="0,0,0,16"/>
+                        <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="Automatic Background Updates" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,4"/>
-                                <TextBlock Text="Automatically starts SteamVault on system boot (minimized in tray). In the background, it instantly checks for game updates and updates your Lua configurations with zero resources used." 
-                                           Foreground="{StaticResource DimText}" TextWrapping="Wrap" FontSize="12" MaxWidth="580" HorizontalAlignment="Left"/>
+                                <TextBlock Text="Automatic Background Updates" FontWeight="Medium" FontSize="14" Margin="0,0,0,4"/>
+                                <TextBlock Text="Starts SteamVault on system boot (minimized). Silently updates game configurations in the background." 
+                                           Foreground="{DynamicResource MutedText}" TextWrapping="Wrap" FontSize="13" MaxWidth="600" HorizontalAlignment="Left"/>
                             </StackPanel>
-                            
-                            <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" 
-                                      IsChecked="{Binding AutoUpdateEnabled, Mode=TwoWay}"
-                                      VerticalAlignment="Center"/>
+                            <CheckBox Grid.Column="1" Style="{DynamicResource ToggleSwitch}" IsChecked="{Binding AutoUpdateEnabled, Mode=TwoWay}" VerticalAlignment="Center"/>
                         </Grid>
-                    </StackPanel>
-                </Border>
 
-                <!-- Theme Selection -->
-                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="🎨  Theme" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
-                        <TextBlock Text="Choose a color theme for SteamVault. Changes apply instantly." 
-                                   Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,16"/>
+                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,24"/>
+
+                        <!-- Theme Selection -->
+                        <TextBlock Text="Appearance" Style="{DynamicResource SectionHeader}" Margin="0,0,0,16"/>
+                        <TextBlock Text="Choose a color palette. The UI immediately applies the selection." Foreground="{DynamicResource MutedText}" FontSize="13" Margin="0,0,0,16"/>
                         
                         <ItemsControl ItemsSource="{Binding AvailableThemes}">
                             <ItemsControl.ItemsPanel>
@@ -64,142 +55,140 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding}"
-                                            Command="{Binding DataContext.ChangeThemeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Margin="0,0,10,8"
-                                            Padding="16,10"
-                                            FontSize="13"
-                                            Style="{StaticResource GhostButton}"
-                                            Width="150">
-                                    </Button>
+                                    <Button Content="{Binding}" Command="{Binding DataContext.ChangeThemeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="0,0,12,12" Style="{DynamicResource GhostButton}" Width="160" Height="48"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
                 </Border>
 
-                <!-- Lua Export -->
-                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                <!-- Data & Backup Card -->
+                <Border Style="{DynamicResource SurfaceCard}" Margin="0,0,0,24" Padding="32,24">
                     <StackPanel>
-                        <TextBlock Text="📦  Lua Export / Backup" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
-                        <TextBlock Text="Export all your Lua configs and depot manifests into a ZIP file for backup or transfer." 
-                                   Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,16"/>
+                        <TextBlock Text="Data and Configuration" Style="{DynamicResource SectionHeader}" Margin="0,0,0,16"/>
                         
+                        <!-- Lua Export -->
+                        <Grid Margin="0,0,0,24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,32,0">
+                                <TextBlock Text="Export Lua Configurations" FontWeight="Medium" FontSize="14" Margin="0,0,0,4"/>
+                                <TextBlock Text="Bundle all managed Lua configs and depot manifests into a ZIP file." Foreground="{DynamicResource MutedText}" FontSize="13" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding ExportStatus}" Foreground="{DynamicResource SuccessBrush}" FontSize="13" Margin="0,8,0,0" FontWeight="Medium"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Export to ZIP" Command="{Binding ExportLuaCommand}" Width="160" Height="40" Style="{DynamicResource GhostButton}" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,24"/>
+
+                        <!-- Key & Token Database -->
+                        <TextBlock Text="Key and Token Database" FontWeight="Medium" FontSize="14" Margin="0,0,0,16"/>
+                        <Border Background="{DynamicResource SurfaceHover}" CornerRadius="8" Padding="16" Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Text="{Binding DatabaseStats}" Foreground="{DynamicResource Text}" FontSize="13" Margin="0,0,0,4" FontWeight="Medium"/>
+                                <TextBlock Text="{Binding KeySourceDetails}" Foreground="{DynamicResource MutedText}" FontSize="13" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,32,0">
+                                <TextBlock Text="Update Database" FontWeight="Medium" FontSize="14" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding SyncStatusMessage}" Foreground="{DynamicResource DimText}" FontSize="13" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Check for Updates" Command="{Binding SyncDatabaseCommand}" Width="180" Height="40" Style="{DynamicResource GhostButton}" VerticalAlignment="Center"/>
+                        </Grid>
+
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding ExportStatus}" TextWrapping="Wrap" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" FontSize="13" Margin="0,0,16,0"/>
-                            <Button Grid.Column="1" Content="🗜  Export Lua ZIP" Command="{Binding ExportLuaCommand}" Width="160" Height="40" Style="{StaticResource GhostButton}"/>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,32,0">
+                                <TextBlock Text="Force Rescan Sources" FontWeight="Medium" FontSize="14" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding RescanStatusMessage}" Foreground="{DynamicResource DimText}" FontSize="13" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Rescan All Sources" Command="{Binding RescanKeysCommand}" Width="180" Height="40" Style="{DynamicResource GhostButton}" VerticalAlignment="Center"/>
                         </Grid>
                     </StackPanel>
                 </Border>
 
-                <!-- Key & Token Database -->
-                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                <!-- System Directories -->
+                <Border Style="{DynamicResource SurfaceCard}" Margin="0,0,0,24" Padding="32,24">
                     <StackPanel>
-                        <TextBlock Text="🔑  Key &#38; Token Database" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
-                        <TextBlock Text="Multi-source decryption key pipeline: ManifestHub, community mirrors, live API, smart derivation." 
-                                   Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,16"/>
-
-                        <!-- Key Source Stats -->
-                        <Border Background="#0A0A14" CornerRadius="8" Padding="14" Margin="0,0,0,16">
-                            <StackPanel>
-                                <TextBlock Text="{Binding DatabaseStats}" Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,6" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding KeySourceDetails}" Foreground="{StaticResource DimText}" FontSize="12" TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Border>
+                        <TextBlock Text="Local Directories" Style="{DynamicResource SectionHeader}" Margin="0,0,0,24"/>
                         
-                        <!-- Sync Button -->
-                        <Grid Margin="0,0,0,12">
+                        <Grid Margin="0,0,0,24">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding SyncStatusMessage}" TextWrapping="Wrap" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" FontSize="13" Margin="0,0,16,0"/>
-                            <Button Grid.Column="1" Content="🔄  Update Database" Command="{Binding SyncDatabaseCommand}" Width="180" Height="40" Style="{StaticResource GhostButton}"/>
+                            <TextBlock Grid.Column="0" Text="Steam Main Directory" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}" FontSize="13"/>
+                            <TextBox Grid.Column="1" Text="{Binding Settings.SteamDirectory, Mode=TwoWay}" Height="48" Tag="C:\Program Files (x86)\Steam" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace"/>
                         </Grid>
 
-                        <!-- Rescan Button -->
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding RescanStatusMessage}" TextWrapping="Wrap" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" FontSize="13" Margin="0,0,16,0"/>
-                            <Button Grid.Column="1" Content="🔍  Rescan Community Sources" Command="{Binding RescanKeysCommand}" Width="220" Height="40" Style="{StaticResource GhostButton}"/>
+                            <TextBlock Grid.Column="0" Text="Lua Target Path" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}" FontSize="13"/>
+                            <TextBox Grid.Column="1" Text="{Binding Settings.LuaOutputPath, Mode=TwoWay}" Height="48" Tag="C:\Program Files (x86)\Steam\config\lua" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace"/>
                         </Grid>
-
-                        <TextBlock Text="Pulls keys from ManifestHub (GitHub) + community mirrors. Live API lookups happen automatically when generating games. Cached keys persist across sessions."
-                                   Foreground="{StaticResource DimText}" FontSize="12" Margin="0,12,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Discord -->
-                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24" Margin="0,0,0,16"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="💬  Discord Community" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
-                        <TextBlock Text="Missing decryption keys for a game? Request it on our Discord server! Our community actively maintains the key database and can help add support for new releases." 
-                                   Foreground="{StaticResource MutedText}" FontSize="13" Margin="0,0,0,16" TextWrapping="Wrap"/>
-                        
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="discord.gg/kxpRNzqnsX" Foreground="#5865F2" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" Margin="0,0,16,0"/>
-                            <Button Grid.Column="1" Content="💬  Join Discord Server" Command="{Binding JoinDiscordCommand}" Width="200" Height="40">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                        <Setter Property="Background" Value="#5865F2"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                        <Setter Property="FontSize" Value="13"/>
-                                        <Setter Property="Cursor" Value="Hand"/>
-                                        <Style.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#4752C4"/>
-                                            </Trigger>
-                                            <Trigger Property="IsPressed" Value="True">
-                                                <Setter Property="Background" Value="#3C45A5"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                        </Grid>
-                    </StackPanel>
+                <Border Background="#1A5865F2" CornerRadius="12" Padding="32,24" Margin="0,0,0,48">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,32,0">
+                            <TextBlock Text="Join the SteamVault Discord" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,4" Foreground="#A5B4FC"/>
+                            <TextBlock Text="Request missing decryption keys, report bugs, or get help from the community." Foreground="#A5B4FC" FontSize="13" TextWrapping="Wrap" Opacity="0.8"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Open Discord" Command="{Binding JoinDiscordCommand}" Width="160" Height="40" VerticalAlignment="Center">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="Background" Value="#5865F2"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#4752C4"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter Property="Background" Value="#3C45A5"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
                 </Border>
 
-                <!-- Local Directories -->
-                <Border Background="{StaticResource CardBackground}" CornerRadius="14" Padding="24"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="📂  Local Directories" FontWeight="Bold" FontSize="16" Margin="0,0,0,16"/>
-                        
-                        <TextBlock Text="Steam Main Directory" Style="{StaticResource SubtitleText}" Margin="0,0,0,6" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding Settings.SteamDirectory, Mode=TwoWay}" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,18" Tag="e.g. C:\Program Files (x86)\Steam"/>
-                        
-                        <TextBlock Text="Lua Files Target Directory (.lua)" Style="{StaticResource SubtitleText}" Margin="0,0,0,6" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding Settings.LuaOutputPath, Mode=TwoWay}" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,18" Tag="e.g. C:\Program Files (x86)\Steam\config\lua"/>
-                    </StackPanel>
-                </Border>
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Save Button / Feedback Footer -->
-        <Grid Grid.Row="2" Margin="0,24,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding StatusMessage}" Foreground="#10B981" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
-            <Button Grid.Column="1" Content="💾  Save Settings" Command="{Binding SaveCommand}" Width="160" Height="40"/>
-        </Grid>
+        <!-- Save Footer -->
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceBase}" Margin="-48,24,-48,-40" Padding="48,20">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" BlurRadius="20" Opacity="0.2" ShadowDepth="-4"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" FontWeight="Medium" FontSize="14"/>
+                <Button Grid.Column="1" Content="Save Changes" Command="{Binding SaveCommand}" Width="160" Height="44"/>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

@@ -64,6 +64,9 @@ public partial class App : Application
         // Auto-detect Steam paths if not configured
         _settingsService.Settings.AutoDetectPaths();
 
+        // Apply saved theme on startup so the Installation screen gets the correct brushes
+        ThemeManager.ApplySavedTheme(_settingsService.Settings.Theme);
+
         // Check if OpenSteamTool installation is needed (first run)
         if (!_settingsService.Settings.IsInstalled)
         {
@@ -129,9 +132,6 @@ public partial class App : Application
             depotKeyService,
             luaParser,
             downloadService);
-
-        // Apply saved theme on startup
-        ThemeManager.ApplySavedTheme(_settingsService!.Settings.Theme);
 
         var mainVM = new MainViewModel(
             _settingsService!,
@@ -203,14 +203,24 @@ public partial class App : Application
 
         try
         {
-            var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
-            if (!string.IsNullOrEmpty(exePath))
+            // Try to load the embedded ICO resource first
+            var icoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SteamVault.ico");
+            if (System.IO.File.Exists(icoPath))
             {
-                _notifyIcon.Icon = Icon.ExtractAssociatedIcon(exePath) ?? SystemIcons.Application;
+                _notifyIcon.Icon = new Icon(icoPath);
             }
             else
             {
-                _notifyIcon.Icon = SystemIcons.Shield;
+                // Fallback: extract from the running EXE
+                var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                if (!string.IsNullOrEmpty(exePath))
+                {
+                    _notifyIcon.Icon = Icon.ExtractAssociatedIcon(exePath) ?? SystemIcons.Application;
+                }
+                else
+                {
+                    _notifyIcon.Icon = SystemIcons.Application;
+                }
             }
         }
         catch
@@ -238,7 +248,19 @@ public partial class App : Application
             {
                 if (success)
                 {
-                    _notifyIcon?.ShowBalloonTip(4000, "SteamVault Update", $"✓ Updated config for {gameName}", ToolTipIcon.Info);
+                    _notifyIcon?.ShowBalloonTip(4000, "SteamVault Update", $"Updated config for {gameName}", ToolTipIcon.Info);
+                    
+                    // Instantly sync the UI state for this specific game
+                    if (_mainWindow?.DataContext is MainViewModel mainVM)
+                    {
+                        var entry = mainVM.MyGamesVM.Games.FirstOrDefault(g => g.Name == gameName);
+                        if (entry != null)
+                        {
+                            entry.Status = "Up to Date";
+                            entry.LastUpdated = DateTime.Now;
+                            mainVM.MyGamesVM.CanUpdateAll = mainVM.MyGamesVM.Games.Any(g => g.Status == "Update Available");
+                        }
+                    }
                 }
             });
         };
@@ -252,7 +274,8 @@ public partial class App : Application
             if (_mainWindow?.DataContext is MainViewModel mainVM)
             {
                 mainVM.RefreshSidebarStats();
-                mainVM.MyGamesVM.RefreshCommand.Execute(null);
+                // Optionally trigger a full background refresh to re-sync any missed state
+                _ = mainVM.MyGamesVM.RefreshAsync();
             }
         });
 
@@ -262,22 +285,22 @@ public partial class App : Application
         {
             if (result.FolderMissing)
             {
-                _notifyIcon?.ShowBalloonTip(5000, "SteamVault Scan Failed", "✗ Lua output folder not found. Please verify your directories in Settings.", ToolTipIcon.Error);
+                _notifyIcon?.ShowBalloonTip(5000, "SteamVault Scan Failed", "Lua output folder not found. Please verify your directories in Settings.", ToolTipIcon.Error);
             }
             else if (result.TotalGames == 0)
             {
-                _notifyIcon?.ShowBalloonTip(5000, "SteamVault Update", "📂 No games found in local vault. Download game configs first!", ToolTipIcon.Warning);
+                _notifyIcon?.ShowBalloonTip(5000, "SteamVault Update", "No games found in local vault. Download game configs first!", ToolTipIcon.Warning);
             }
             else if (result.UpdatedCount > 0)
             {
-                var summaryText = $"✓ Updated: {result.UpdatedCount} game(s)\n• Up to date: {result.UpToDateCount} game(s)";
-                if (result.FailedCount > 0) summaryText += $"\n✗ Failed: {result.FailedCount} game(s)";
+                var summaryText = $"Updated: {result.UpdatedCount} game(s)\nUp to date: {result.UpToDateCount} game(s)";
+                if (result.FailedCount > 0) summaryText += $"\nFailed: {result.FailedCount} game(s)";
                 
                 _notifyIcon?.ShowBalloonTip(6000, "SteamVault Update Summary", summaryText, ToolTipIcon.Info);
             }
             else
             {
-                _notifyIcon?.ShowBalloonTip(5000, "SteamVault Update", $"✓ All {result.UpToDateCount} game(s) are fully up to date!", ToolTipIcon.Info);
+                _notifyIcon?.ShowBalloonTip(5000, "SteamVault Update", $"All {result.UpToDateCount} game(s) are fully up to date!", ToolTipIcon.Info);
             }
         });
     }

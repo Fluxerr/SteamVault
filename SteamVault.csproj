@@ -9,10 +9,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>SteamVault</AssemblyName>
     <RootNamespace>SteamVault</RootNamespace>
-    <Version>2.5.0</Version>
+    <Version>2.5.1</Version>
     <Authors>SteamVault</Authors>
     <Description>Offline Steam depot manifest manager — download, manage, and keep your Steam game configurations up to date with no Steam client required.</Description>
     <Copyright>MIT License</Copyright>
+    <!-- Application icon — used for EXE icon, taskbar, system tray -->
+    <ApplicationIcon>SteamVault.ico</ApplicationIcon>
     <!-- Single-file self-contained publish: bundles the app, .NET runtime, and all content (DLLs, JSON data) into one EXE -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
@@ -24,6 +26,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="SharpCompress" Version="0.38.0" />
     <PackageReference Include="SteamKit2" Version="3.4.0" />
@@ -50,6 +53,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Embed the ICO as a resource for tray icon and window icon -->
+    <Resource Include="SteamVault.ico" />
   </ItemGroup>
 
 </Project>

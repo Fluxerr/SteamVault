@@ -246,7 +246,6 @@ public class SteamApiService
 
                 var maxSize = depotData["maxsize"]?.Value<long>() ?? depotData["config"]?["maxsize"]?.Value<long>() ?? 0;
                 var isSharedInstall = depotData["sharedinstall"]?.Value<int>() == 1;
-                if (isSharedInstall) continue;
 
                 string? dlcAppId = null;
                 var dlcappidToken = depotData["dlcappid"];

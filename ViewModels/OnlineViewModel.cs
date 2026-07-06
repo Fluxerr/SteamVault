@@ -304,22 +304,39 @@ public class OnlineViewModel : ViewModelBase
         _onlineFix.OpenGameDirectory(entry.AppId);
     }
 
-    private void OpenOnlineFixBrowser(OnlineGameEntry? entry)
+    private void OpenOnlineFixBrowser(OnlineGameEntry? game)
     {
-        if (entry == null) return;
-        _onlineFix.SearchOnlineFix(entry.Name);
+        if (game == null) return;
+
+        // If the game is installed, start the full fix workflow with the embedded browser
+        if (game.IsInstalled)
+        {
+            StartFixWithBrowser(game);
+        }
+        else
+        {
+            // Just open the browser for browsing
+            try
+            {
+                var window = new SteamVault.Views.OnlineFixBrowserWindow(game.Name);
+                window.Owner = Application.Current.MainWindow;
+                window.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                DetailStatusMessage = $"Browser failed: {ex.Message}";
+            }
+        }
     }
 
     /// <summary>
-    /// Starts the fix workflow:
-    /// 1. Opens online-fix.me search in browser
-    /// 2. Opens app folder for the user
-    /// 3. Starts watching for RAR files
-    /// 4. Auto-extracts when a RAR is detected
+    /// Opens the embedded browser to online-fix.me AND starts the fix extraction pipeline.
+    /// When the user downloads a .rar from the browser, it auto-routes to the app folder,
+    /// the file watcher detects it, and extraction happens automatically.
     /// </summary>
-    private void StartFixProcess(OnlineGameEntry? entry)
+    private void StartFixWithBrowser(OnlineGameEntry entry)
     {
-        if (entry == null || !entry.IsInstalled || IsBusy) return;
+        if (IsBusy) return;
 
         IsBusy = true;
         entry.IsApplying = true;
@@ -327,13 +344,9 @@ public class OnlineViewModel : ViewModelBase
         NeedsAdminRights = false;
         CommandManager.InvalidateRequerySuggested();
 
-        var appDir = OnlineFixService.GetAppDirectory();
-        DetailStatusMessage = $"1. Find your game on online-fix.me\n2. Download the .rar\n3. Save it to:\n{appDir}\n\nThe app will auto-detect and extract it.";
+        DetailStatusMessage = "Browser open — download the fix .rar and it will be applied automatically.";
 
-        // Open the search page in browser
-        _onlineFix.SearchOnlineFix(entry.Name);
-
-        // Start watching for RAR files
+        // Start watching for RAR files (handles both browser-intercepted and manual drops)
         _onlineFix.StartWatching(async rarPath =>
         {
             await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -376,6 +389,36 @@ public class OnlineViewModel : ViewModelBase
                 FinishFixProcess(entry, result);
             });
         });
+
+        // Open the embedded browser
+        try
+        {
+            var window = new SteamVault.Views.OnlineFixBrowserWindow(entry.Name);
+            window.Owner = Application.Current.MainWindow;
+            window.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            DetailStatusMessage = $"Browser failed: {ex.Message}";
+        }
+
+        // If browser closed without a download, clean up
+        if (entry.IsApplying)
+        {
+            FinishFixProcess(entry, OnlineFixService.ExtractResult.Failed);
+            if (!entry.FixApplied)
+                DetailStatusMessage = "Browser closed. Download a fix .rar to apply it.";
+        }
+    }
+
+    /// <summary>
+    /// Legacy: Opens the embedded browser directly (used by the "Apply Fix" button).
+    /// Now redirects to the unified StartFixWithBrowser flow.
+    /// </summary>
+    private void StartFixProcess(OnlineGameEntry? entry)
+    {
+        if (entry == null || !entry.IsInstalled || IsBusy) return;
+        StartFixWithBrowser(entry);
     }
 
     private void FinishFixProcess(OnlineGameEntry entry, OnlineFixService.ExtractResult result)

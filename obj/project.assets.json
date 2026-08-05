@@ -2,6 +2,22 @@
   "version": 3,
   "targets": {
     "net9.0-windows7.0": {
+      "DiscordRichPresence/1.6.1.70": {
+        "type": "package",
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.1"
+        },
+        "compile": {
+          "lib/net9.0/DiscordRPC.dll": {
+            "related": ".deps.json;.pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/net9.0/DiscordRPC.dll": {
+            "related": ".deps.json;.pdb;.xml"
+          }
+        }
+      },
       "Microsoft.NET.ILLink.Tasks/9.0.13": {
         "type": "package",
         "build": {
@@ -70,20 +86,13 @@
           }
         }
       },
-      "SharpCompress/0.38.0": {
+      "SharpCompress/0.50.0": {
         "type": "package",
-        "dependencies": {
-          "ZstdSharp.Port": "0.8.1"
-        },
         "compile": {
-          "lib/net8.0/SharpCompress.dll": {
-            "related": ".pdb"
-          }
+          "lib/net8.0/SharpCompress.dll": {}
         },
         "runtime": {
-          "lib/net8.0/SharpCompress.dll": {
-            "related": ".pdb"
-          }
+          "lib/net8.0/SharpCompress.dll": {}
         }
       },
       "SteamKit2/3.4.0": {
@@ -131,6 +140,22 @@
       }
     },
     "net9.0-windows7.0/win-x64": {
+      "DiscordRichPresence/1.6.1.70": {
+        "type": "package",
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.1"
+        },
+        "compile": {
+          "lib/net9.0/DiscordRPC.dll": {
+            "related": ".deps.json;.pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/net9.0/DiscordRPC.dll": {
+            "related": ".deps.json;.pdb;.xml"
+          }
+        }
+      },
       "Microsoft.NET.ILLink.Tasks/9.0.13": {
         "type": "package",
         "build": {
@@ -188,20 +213,13 @@
           }
         }
       },
-      "SharpCompress/0.38.0": {
+      "SharpCompress/0.50.0": {
         "type": "package",
-        "dependencies": {
-          "ZstdSharp.Port": "0.8.1"
-        },
         "compile": {
-          "lib/net8.0/SharpCompress.dll": {
-            "related": ".pdb"
-          }
+          "lib/net8.0/SharpCompress.dll": {}
         },
         "runtime": {
-          "lib/net8.0/SharpCompress.dll": {
-            "related": ".pdb"
-          }
+          "lib/net8.0/SharpCompress.dll": {}
         }
       },
       "SteamKit2/3.4.0": {
@@ -250,6 +268,28 @@
     }
   },
   "libraries": {
+    "DiscordRichPresence/1.6.1.70": {
+      "sha512": "yho1fdhbsedICHdfHe/Tu3IX6a5oj4fiPFL0keZStlsh7T/FrdjcwZZ7C1uC2HUvcXbFh+VEJvcbo1W66QtkUg==",
+      "type": "package",
+      "path": "discordrichpresence/1.6.1.70",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "discordrichpresence.1.6.1.70.nupkg.sha512",
+        "discordrichpresence.nuspec",
+        "lib/net45/DiscordRPC.dll",
+        "lib/net45/DiscordRPC.pdb",
+        "lib/net45/DiscordRPC.xml",
+        "lib/net9.0/DiscordRPC.deps.json",
+        "lib/net9.0/DiscordRPC.dll",
+        "lib/net9.0/DiscordRPC.pdb",
+        "lib/net9.0/DiscordRPC.xml",
+        "lib/netstandard2.0/DiscordRPC.dll",
+        "lib/netstandard2.0/DiscordRPC.pdb",
+        "lib/netstandard2.0/DiscordRPC.xml"
+      ]
+    },
     "Microsoft.NET.ILLink.Tasks/9.0.13": {
       "sha512": "f7t15I9ZXV7fNk3FIzPAlkJNG1A1tkSeDpRh+TFWEToGGqA+uj6uqU15I8YOkkYICNY2tqOVm2CMe6ScPFPwEg==",
       "type": "package",
@@ -470,25 +510,21 @@
         "readme.md"
       ]
     },
-    "SharpCompress/0.38.0": {
-      "sha512": "8i6KqjAFI3mvya8W8rnQrf5h4vz6ilw4zqk2AzInVqqqZ25TD6fmVeYBnlisjTWwP26eltZc0buSmJ8a3YIGxg==",
+    "SharpCompress/0.50.0": {
+      "sha512": "EzoWIzA31rb/kADwHkcmdT1rzqnT91kR/Df8X/gqd3qvXhgMbCzyKIWH6M3LTDwPIr0uLoXfX9fvThidXHBdyQ==",
       "type": "package",
-      "path": "sharpcompress/0.38.0",
+      "path": "sharpcompress/0.50.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "README.md",
-        "lib/net462/SharpCompress.dll",
-        "lib/net462/SharpCompress.pdb",
+        "lib/net10.0/SharpCompress.dll",
+        "lib/net48/SharpCompress.dll",
         "lib/net6.0/SharpCompress.dll",
-        "lib/net6.0/SharpCompress.pdb",
         "lib/net8.0/SharpCompress.dll",
-        "lib/net8.0/SharpCompress.pdb",
         "lib/netstandard2.0/SharpCompress.dll",
-        "lib/netstandard2.0/SharpCompress.pdb",
         "lib/netstandard2.1/SharpCompress.dll",
-        "lib/netstandard2.1/SharpCompress.pdb",
-        "sharpcompress.0.38.0.nupkg.sha512",
+        "sharpcompress.0.50.0.nupkg.sha512",
         "sharpcompress.nuspec"
       ]
     },
@@ -566,10 +602,11 @@
   },
   "projectFileDependencyGroups": {
     "net9.0-windows7.0": [
+      "DiscordRichPresence >= 1.6.1.70",
       "Microsoft.NET.ILLink.Tasks >= 9.0.13",
       "Microsoft.Web.WebView2 >= 1.0.3967.48",
       "Newtonsoft.Json >= 13.0.4",
-      "SharpCompress >= 0.38.0",
+      "SharpCompress >= 0.50.0",
       "SteamKit2 >= 3.4.0"
     ]
   },
@@ -580,11 +617,11 @@
   "project": {
     "version": "2.5.1",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\SteamVault.csproj",
+      "projectUniqueName": "C:\\Users\\Cilliain\\Desktop\\SteamVault Source\\SteamVault\\SteamVault.csproj",
       "projectName": "SteamVault",
-      "projectPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\SteamVault.csproj",
+      "projectPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault Source\\SteamVault\\SteamVault.csproj",
       "packagesPath": "C:\\Users\\Cilliain\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\obj\\",
+      "outputPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault Source\\SteamVault\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -623,6 +660,10 @@
       "net9.0-windows7.0": {
         "targetAlias": "net9.0-windows",
         "dependencies": {
+          "DiscordRichPresence": {
+            "target": "Package",
+            "version": "[1.6.1.70, )"
+          },
           "Microsoft.NET.ILLink.Tasks": {
             "suppressParent": "All",
             "target": "Package",
@@ -639,7 +680,7 @@
           },
           "SharpCompress": {
             "target": "Package",
-            "version": "[0.38.0, )"
+            "version": "[0.50.0, )"
           },
           "SteamKit2": {
             "target": "Package",
@@ -687,18 +728,5 @@
         "#import": []
       }
     }
-  },
-  "logs": [
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "Package 'SharpCompress' 0.38.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-6c8g-7p36-r338",
-      "libraryId": "SharpCompress",
-      "targetGraphs": [
-        "net9.0-windows7.0",
-        "net9.0-windows7.0/win-x64"
-      ]
-    }
-  ]
+  }
 }

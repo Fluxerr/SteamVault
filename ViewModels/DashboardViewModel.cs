@@ -340,6 +340,8 @@ public class DashboardViewModel : ViewModelBase
         ShowSearchResults = false;
         CommandManager.InvalidateRequerySuggested();
 
+        DiscordService.Instance.SetPresence($"Preparing to download...", "Working");
+
         try
         {
             var result = await _downloadService.DownloadGameAsync(
@@ -354,6 +356,7 @@ public class DashboardViewModel : ViewModelBase
                 {
                     IsComplete = true;
                     GameName = result.Game?.Name;
+                    DiscordService.Instance.SetPresence($"Exploring the Vault", "Idle");
                     GameImage = result.Game?.HeaderImageUrl;
                     GameDescription = result.Game?.ShortDescription;
                     GameType = result.Game?.Type;
@@ -377,6 +380,7 @@ public class DashboardViewModel : ViewModelBase
                 {
                     HasError = true;
                     StatusMessage = $"✗ {result.Error}";
+                    DiscordService.Instance.SetPresence($"Exploring the Vault", "Idle");
                 }
 
                 CommandManager.InvalidateRequerySuggested();
@@ -488,37 +492,34 @@ public class DashboardViewModel : ViewModelBase
             var entries = _luaParser.ScanLuaFolder(luaPath);
             if (entries.Count == 0) return;
 
-            // Filter to installed only, take up to 4 newest
-            var installedEntries = new List<LibraryEntry>();
+            // Filter to up to 4 newest
+            var recentEntries = new List<LibraryEntry>();
             foreach (var e in entries.OrderByDescending(e => e.LastUpdated))
             {
-                if (_gameMgmt.IsGameInstalled(e.AppId))
-                    installedEntries.Add(e);
-                if (installedEntries.Count >= 4)
+                recentEntries.Add(e);
+                if (recentEntries.Count >= 4)
                     break;
             }
 
-            if (installedEntries.Count == 0) return;
+            if (recentEntries.Count == 0) return;
 
             // Add entries to UI immediately with placeholder data
-            foreach (var entry in installedEntries)
+            foreach (var entry in recentEntries)
             {
                 FeaturedGames.Add(new FeaturedGameEntry
                 {
                     AppId = entry.AppId,
                     Name = entry.Name,
                     HeaderImageUrl = entry.HeaderImageUrl,
-                    IsInstalled = true,
+                    IsInstalled = _gameMgmt.IsGameInstalled(entry.AppId),
                 });
             }
             HasFeaturedGames = FeaturedGames.Count > 0;
 
-            // Fire API calls in parallel
-            var semaphore = new SemaphoreSlim(4);
-            var tasks = installedEntries.Select(async entry =>
+            // Fire API calls sequentially
+            foreach (var entry in recentEntries)
             {
                 var gameEntry = FeaturedGames.First(g => g.AppId == entry.AppId);
-                await semaphore.WaitAsync();
                 try
                 {
                     // Fetch details
@@ -552,10 +553,8 @@ public class DashboardViewModel : ViewModelBase
                         catch { }
                     }
                 }
-                finally { semaphore.Release(); }
-            });
-
-            await Task.WhenAll(tasks);
+                catch { }
+            }
         }
         catch { }
     }

@@ -39,8 +39,24 @@ public class DepotKeyService
     public int AppDataKeyCount { get; private set; }
     public int CachedKeyCount { get; private set; }
     public int ScrapedKeyCount { get; private set; }
+    public int RemoteConfigKeyCount { get; private set; }
     public int LiveApiKeyCount { get; private set; }
     public int DerivedKeyCount { get; private set; }
+
+    // Remote config (your personal GitHub repo for hot-adding keys without rebuilding)
+    private Dictionary<string, string> _remoteConfigKeys = new();
+    private Dictionary<string, string> _remoteConfigTokens = new();
+
+    private static readonly string RemoteConfigKeysPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SteamVault", "remote_config_keys.json");
+
+    private static readonly string RemoteConfigTokensPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SteamVault", "remote_config_tokens.json");
+
+    // Your personal repo URL — push updated JSON files here to instantly update all users
+    // We use the GitHub API to completely bypass the 5-minute CDN cache of raw.githubusercontent.com
+    private const string REMOTE_CONFIG_KEYS_URL = "https://api.github.com/repos/Fluxerr/SteamVaultKeys/contents/depotkeys.json";
+    private const string REMOTE_CONFIG_TOKENS_URL = "https://api.github.com/repos/Fluxerr/SteamVaultKeys/contents/appaccesstokens.json";
 
     private static readonly string KeysCachePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SteamVault", "keys_cache.json");
@@ -58,7 +74,7 @@ public class DepotKeyService
 
     public int AppTokenCount => _appAccessTokens.Count;
     public int DepotKeyCount => _depotKeys.Count;
-    public int TotalKeyCount => _depotKeys.Count + _cachedKeys.Count + _scrapedKeys.Count;
+    public int TotalKeyCount => _depotKeys.Count + _cachedKeys.Count + _scrapedKeys.Count + _remoteConfigKeys.Count;
     public bool IsLoaded => _loaded;
 
     public async Task LoadAsync(bool forceReload = false)
@@ -150,6 +166,34 @@ public class DepotKeyService
             }
         }));
 
+        // Load remote config keys (from your personal SteamVaultKeys repo)
+        tasks.Add(Task.Run(async () =>
+        {
+            try
+            {
+                // Instantly fetch the newest changes from the GitHub remote config
+                await DownloadRemoteConfigAsync(null);
+
+                if (File.Exists(RemoteConfigKeysPath))
+                {
+                    var json = File.ReadAllText(RemoteConfigKeysPath);
+                    _remoteConfigKeys = JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+                    RemoteConfigKeyCount = _remoteConfigKeys.Count;
+                    System.Diagnostics.Debug.WriteLine($"DepotKeyService: Loaded {_remoteConfigKeys.Count} remote config keys");
+                }
+                if (File.Exists(RemoteConfigTokensPath))
+                {
+                    var json = File.ReadAllText(RemoteConfigTokensPath);
+                    _remoteConfigTokens = JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+                    System.Diagnostics.Debug.WriteLine($"DepotKeyService: Loaded {_remoteConfigTokens.Count} remote config tokens");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DepotKeyService: Failed to load remote config keys — {ex.Message}");
+            }
+        }));
+
         await Task.WhenAll(tasks);
 
         // 2. Overlay the baked-in local database (highest priority)
@@ -196,9 +240,15 @@ public class DepotKeyService
             }
         }
 
+        // Overlay remote config keys (highest priority from your personal repo)
+        foreach (var kvp in _remoteConfigKeys)
+            _depotKeys[kvp.Key] = kvp.Value;
+        foreach (var kvp in _remoteConfigTokens)
+            _appAccessTokens[kvp.Key] = kvp.Value;
+
         _loaded = true;
         System.Diagnostics.Debug.WriteLine($"DepotKeyService: Load complete — " +
-            $"{DepotKeyCount} synced + {_cachedKeys.Count} cached + {_scrapedKeys.Count} scraped + {LocalKeyCount} local keys, " +
+            $"{DepotKeyCount} synced + {_cachedKeys.Count} cached + {_scrapedKeys.Count} scraped + {RemoteConfigKeyCount} remote + {LocalKeyCount} local keys, " +
             $"{_appAccessTokens.Count} app tokens");
     }
 
@@ -216,6 +266,10 @@ public class DepotKeyService
 
             // 1. Download from primary ManifestHub GitHub
             var primarySuccess = await DownloadPrimarySourceAsync(onProgress);
+
+            // 1b. Download from your personal SteamVaultKeys repo (overlays on top — highest priority)
+            var remoteConfigSuccess = await DownloadRemoteConfigAsync(onProgress);
+            anySuccess = anySuccess || remoteConfigSuccess;
 
             // 2. Scrape community mirrors (fills gaps only)
             onProgress?.Invoke("Checking community key mirrors...");
@@ -344,6 +398,97 @@ public class DepotKeyService
     }
 
     /// <summary>
+    /// Downloads keys/tokens from your personal SteamVaultKeys GitHub repo.
+    /// These overlay on top of ManifestHub and local keys with the highest priority.
+    /// Push new JSON files to https://github.com/Fluxerr/SteamVaultKeys to hot-update all users.
+    /// </summary>
+    private async Task<bool> DownloadRemoteConfigAsync(Action<string>? onProgress)
+    {
+        try
+        {
+            onProgress?.Invoke("Checking SteamVaultKeys remote config...");
+            var newKeys = new Dictionary<string, string>();
+            var newTokens = new Dictionary<string, string>();
+
+            // Download keys
+            try
+            {
+                var req = new HttpRequestMessage(HttpMethod.Get, REMOTE_CONFIG_KEYS_URL);
+                req.Headers.Add("Accept", "application/vnd.github.v3.raw");
+                req.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                
+                var keysResponse = await _httpClient.SendAsync(req);
+                if (keysResponse.IsSuccessStatusCode)
+                {
+                    var json = await keysResponse.Content.ReadAsStringAsync();
+                    var parsed = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                    if (parsed != null)
+                        newKeys = parsed;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DepotKeyService: Remote config keys download failed — {ex.Message}");
+            }
+
+            // Download tokens
+            try
+            {
+                var req = new HttpRequestMessage(HttpMethod.Get, REMOTE_CONFIG_TOKENS_URL);
+                req.Headers.Add("Accept", "application/vnd.github.v3.raw");
+                req.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                var tokensResponse = await _httpClient.SendAsync(req);
+                if (tokensResponse.IsSuccessStatusCode)
+                {
+                    var json = await tokensResponse.Content.ReadAsStringAsync();
+                    var parsed = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                    if (parsed != null)
+                        newTokens = parsed;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DepotKeyService: Remote config tokens download failed — {ex.Message}");
+            }
+
+            if (newKeys.Count > 0 || newTokens.Count > 0)
+            {
+                _remoteConfigKeys = newKeys;
+                _remoteConfigTokens = newTokens;
+                RemoteConfigKeyCount = newKeys.Count;
+
+                // Save to local cache
+                try
+                {
+                    var dir = Path.GetDirectoryName(RemoteConfigKeysPath);
+                    if (dir != null) Directory.CreateDirectory(dir);
+
+                    if (newKeys.Count > 0)
+                        File.WriteAllText(RemoteConfigKeysPath, JsonConvert.SerializeObject(newKeys, Formatting.Indented));
+                    if (newTokens.Count > 0)
+                        File.WriteAllText(RemoteConfigTokensPath, JsonConvert.SerializeObject(newTokens, Formatting.Indented));
+                }
+                catch { }
+
+                onProgress?.Invoke($"Remote config: {newKeys.Count} keys, {newTokens.Count} tokens from SteamVaultKeys repo.");
+                return true;
+            }
+            else
+            {
+                onProgress?.Invoke("Remote config: no additional keys found (repo may be empty or unavailable).");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"DepotKeyService: Remote config download failed — {ex.Message}");
+            onProgress?.Invoke($"Remote config unavailable ({ex.Message}) — using cached data.");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Forces a refresh of community scraped keys (useful for "Rescan Keys" button).
     /// </summary>
     public async Task<bool> RefreshScrapedKeysAsync(Action<string>? onProgress = null)
@@ -371,7 +516,11 @@ public class DepotKeyService
 
     public string? GetAppAccessToken(string appId)
     {
-        // Check local/synced first
+        // Check remote config first (your personal SteamVaultKeys repo — highest priority)
+        if (_remoteConfigTokens.TryGetValue(appId, out var remoteToken))
+            return remoteToken;
+
+        // Check local/synced
         if (_appAccessTokens.TryGetValue(appId, out var token))
             return token;
 
@@ -384,7 +533,11 @@ public class DepotKeyService
 
     public string? GetDepotKey(string depotId, string? appIdFallback = null)
     {
-        // Priority order: cache > local/synced > scraped > fallbacks
+        // Priority order: remote config > cache > local/synced > scraped > fallbacks
+
+        // 0. Check remote config (your personal SteamVaultKeys repo — highest priority)
+        if (_remoteConfigKeys.TryGetValue(depotId, out var remoteKey))
+            return remoteKey;
 
         // 1. Check live API cache
         if (_cachedKeys.TryGetValue(depotId, out var cached))
@@ -401,6 +554,8 @@ public class DepotKeyService
         // 4. Fallback: try looking up by the app ID
         if (!string.IsNullOrWhiteSpace(appIdFallback))
         {
+            if (_remoteConfigKeys.TryGetValue(appIdFallback, out var appRemoteKey))
+                return appRemoteKey;
             if (_depotKeys.TryGetValue(appIdFallback, out var appKey))
                 return appKey;
             if (_scrapedKeys.TryGetValue(appIdFallback, out var appScrapedKey))
@@ -654,8 +809,8 @@ public class DepotKeyService
         return depots;
     }
 
-    public bool HasAppToken(string appId) => _appAccessTokens.ContainsKey(appId) || _scrapedTokens.ContainsKey(appId);
-    public bool HasDepotKey(string depotId) => _depotKeys.ContainsKey(depotId) || _scrapedKeys.ContainsKey(depotId) || _cachedKeys.ContainsKey(depotId);
+    public bool HasAppToken(string appId) => _remoteConfigTokens.ContainsKey(appId) || _appAccessTokens.ContainsKey(appId) || _scrapedTokens.ContainsKey(appId);
+    public bool HasDepotKey(string depotId) => _remoteConfigKeys.ContainsKey(depotId) || _depotKeys.ContainsKey(depotId) || _scrapedKeys.ContainsKey(depotId) || _cachedKeys.ContainsKey(depotId);
 
     /// <summary>
     /// Get all known app IDs from the access tokens database (synced + scraped).

@@ -179,4 +179,7 @@ public class SearchResult
     public string Name { get; set; } = "";
     public string ImageUrl { get; set; } = "";
     public double MatchScore { get; set; }
+    public string PriceFormatted { get; set; } = "";
+    public string Developer { get; set; } = "";
+    public string SizeFormatted { get; set; } = "";
 }

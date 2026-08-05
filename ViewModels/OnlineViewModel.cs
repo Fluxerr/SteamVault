@@ -379,7 +379,7 @@ public class OnlineViewModel : ViewModelBase
                 }
                 else if (result == OnlineFixService.ExtractResult.PermissionDenied)
                 {
-                    DetailStatusMessage = error;
+                    DetailStatusMessage = error ?? "Permission denied — the game folder requires administrator rights.";
                     NeedsAdminRights = true;
                 }
                 else

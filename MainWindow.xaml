@@ -11,10 +11,10 @@
         MinWidth="900" MinHeight="600"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
-        TextOptions.TextFormattingMode="Display"
-        TextOptions.TextRenderingMode="ClearType"
-        TextOptions.TextHintingMode="Fixed"
-        RenderOptions.ClearTypeHint="Enabled">
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        TextOptions.TextHintingMode="Auto"
+        RenderOptions.ClearTypeHint="Auto">
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="42" ResizeBorderThickness="7" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />

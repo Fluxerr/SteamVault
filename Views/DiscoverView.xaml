@@ -13,6 +13,14 @@
         
         <DataTemplate x:Key="DiscoverCardTemplate">
             <Border x:Name="DiscoverCard" Margin="6" Background="{DynamicResource SurfaceBase}" CornerRadius="12" ClipToBounds="True" Cursor="Hand" MouseLeftButtonDown="DiscoverCard_Click" RenderTransformOrigin="0.5,0.5" TextOptions.TextFormattingMode="Ideal" TextOptions.TextHintingMode="Animated">
+                <Border.ToolTip>
+                    <ToolTip Background="{DynamicResource SurfaceRaised}" BorderThickness="0" HasDropShadow="True">
+                        <StackPanel Margin="8">
+                            <TextBlock Text="{Binding Name}" FontWeight="Medium" FontSize="14" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding PriceFormatted}" FontSize="13" Foreground="{DynamicResource SuccessBrush}"/>
+                        </StackPanel>
+                    </ToolTip>
+                </Border.ToolTip>
                 <Border.RenderTransform>
                     <ScaleTransform ScaleX="1" ScaleY="1"/>
                 </Border.RenderTransform>
@@ -87,12 +95,21 @@
                         <TextBlock Text="Discover" Style="{DynamicResource TitleText}"/>
                         <TextBlock Text="Browse trending games, top sellers, and new releases from Steam." Style="{DynamicResource SubtitleText}"/>
                     </StackPanel>
-                    <Button Grid.Column="1" Command="{Binding RefreshCommand}" Style="{DynamicResource GhostButton}" VerticalAlignment="Top">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Refresh" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                        <!-- Search Box -->
+                        <Border Background="{DynamicResource SurfaceRaised}" CornerRadius="8" Padding="12,0" Margin="0,0,16,0" Height="36">
+                            <Grid>
+                                <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource MutedText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="200" Background="Transparent" BorderThickness="0" Padding="24,0,0,0" VerticalContentAlignment="Center" Tag="Search Discover..."/>
+                            </Grid>
+                        </Border>
+                        <Button Command="{Binding RefreshCommand}" Style="{DynamicResource GhostButton}" Height="36" Padding="12,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
                 <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource DimText}" FontSize="13" Margin="0,0,0,24"/>
@@ -147,6 +164,17 @@
                         <TextBlock Text="Free to Play" Style="{DynamicResource SectionHeader}" Margin="0"/>
                     </StackPanel>
                     <ItemsControl ItemsSource="{Binding FreeGames}" ItemTemplate="{StaticResource DiscoverCardTemplate}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Search Results -->
+                <StackPanel Margin="0,0,0,32" Visibility="{Binding ShowSearchGrid, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <Border Width="4" Height="16" CornerRadius="2" Background="{DynamicResource PrimaryAccent}" Margin="0,0,12,0"/>
+                        <TextBlock Text="Search Results" Style="{DynamicResource SectionHeader}" Margin="0"/>
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding SearchResults}" ItemTemplate="{StaticResource DiscoverCardTemplate}">
                         <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     </ItemsControl>
                 </StackPanel>

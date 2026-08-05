@@ -50,23 +50,24 @@
         <Setter Property="Foreground" Value="{StaticResource Text}" />
         <Setter Property="FontFamily" Value="pack://application:,,,/Fonts/#Inter, Segoe UI, sans-serif" />
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
-        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
-        <Setter Property="RenderOptions.ClearTypeHint" Value="Enabled"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+        <Setter Property="TextOptions.TextRenderingMode" Value="Auto"/>
+        <Setter Property="RenderOptions.ClearTypeHint" Value="Auto"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
     </Style>
 
     <Style x:Key="TitleText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-        <Setter Property="FontSize" Value="28" />
-        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="Margin" Value="0,0,0,12" />
+        <Setter Property="LineHeight" Value="34" />
 
     </Style>
 
     <Style x:Key="SubtitleText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="13.5" />
         <Setter Property="Foreground" Value="{StaticResource MutedText}" />
-        <Setter Property="LineHeight" Value="22"/>
+        <Setter Property="LineHeight" Value="24"/>
     </Style>
 
     <Style x:Key="SectionHeader" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">

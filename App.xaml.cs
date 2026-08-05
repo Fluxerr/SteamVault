@@ -64,6 +64,9 @@ public partial class App : Application
         // Auto-detect Steam paths if not configured
         _settingsService.Settings.AutoDetectPaths();
 
+        // Enforce Windows startup registry state
+        AutoUpdateService.SetStartupEnabled(_settingsService.Settings.AutoUpdateEnabled);
+
         // Apply saved theme on startup so the Installation screen gets the correct brushes
         ThemeManager.ApplySavedTheme(_settingsService.Settings.Theme);
 
@@ -114,6 +117,9 @@ public partial class App : Application
 
     private void InitializeMainApp(bool startSilent)
     {
+        // Start Discord Rich Presence
+        DiscordService.Instance.Initialize();
+
         // Core services
         var depotKeyService = new DepotKeyService();
         var steamApi = new SteamApiService();
@@ -340,6 +346,7 @@ public partial class App : Application
             _notifyIcon.Dispose();
         }
         
+        DiscordService.Instance.Dispose();
         _autoUpdateService?.Cancel();
         
         Current.Dispatcher.Invoke(() =>

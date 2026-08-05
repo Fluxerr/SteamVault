@@ -15,6 +15,9 @@ public class DiscoverViewModel : ViewModelBase
 {
     private readonly SteamApiService _steamApi;
     private readonly DownloadService _downloadService;
+    private readonly GameSearchService _searchService;
+    private CancellationTokenSource? _searchCts;
+    private System.Timers.Timer? _searchDebounce;
 
     // Known hardware/non-game App IDs that Steam's API misclassifies as type 0
     private static readonly HashSet<string> HardwareAppIds = new(StringComparer.OrdinalIgnoreCase)
@@ -28,10 +31,11 @@ public class DiscoverViewModel : ViewModelBase
         "968770",  // Steam Link app
     };
 
-    public DiscoverViewModel(SteamApiService steamApi, DownloadService downloadService)
+    public DiscoverViewModel(SteamApiService steamApi, DownloadService downloadService, GameSearchService searchService)
     {
         _steamApi = steamApi;
         _downloadService = downloadService;
+        _searchService = searchService;
 
         RefreshCommand = new RelayCommand(async _ => await LoadAllAsync(), _ => !IsLoading);
         SelectGameCommand = new RelayCommand(async param => await SelectGameAsync(param as SearchResult));
@@ -44,6 +48,21 @@ public class DiscoverViewModel : ViewModelBase
     public ObservableCollection<SearchResult> TopSellers { get; } = new();
     public ObservableCollection<SearchResult> NewReleases { get; } = new();
     public ObservableCollection<SearchResult> FreeGames { get; } = new();
+    public ObservableCollection<SearchResult> SearchResults { get; } = new();
+
+    private string _searchQuery = "";
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set { SetProperty(ref _searchQuery, value); TriggerSearch(value); }
+    }
+
+    private bool _showSearchGrid;
+    public bool ShowSearchGrid
+    {
+        get => _showSearchGrid;
+        set { SetProperty(ref _showSearchGrid, value); OnPropertyChanged(nameof(ShowBrowseGrid)); }
+    }
 
     private bool _isLoading;
     public bool IsLoading { get => _isLoading; set => SetProperty(ref _isLoading, value); }
@@ -239,6 +258,45 @@ public class DiscoverViewModel : ViewModelBase
 
     private void BackToBrowse() => ShowGameDetail = false;
 
+    private void TriggerSearch(string query)
+    {
+        _searchDebounce?.Stop();
+        _searchDebounce?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 1)
+        {
+            ShowSearchGrid = false;
+            SearchResults.Clear();
+            return;
+        }
+
+        _searchDebounce = new System.Timers.Timer(400) { AutoReset = false };
+        _searchDebounce.Elapsed += async (_, _) =>
+        {
+            await Application.Current.Dispatcher.InvokeAsync(async () => await PerformSearchAsync(query));
+        };
+        _searchDebounce.Start();
+    }
+
+    private async Task PerformSearchAsync(string query)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        IsLoading = true;
+        StatusMessage = "Searching Steam...";
+
+        try
+        {
+            var results = await _searchService.SearchAsync(query, _searchCts.Token);
+            SearchResults.Clear();
+            foreach (var r in results) SearchResults.Add(r);
+            ShowSearchGrid = true;
+            StatusMessage = SearchResults.Count > 0 ? $"Found {SearchResults.Count} results." : "No results found.";
+        }
+        catch (OperationCanceledException) { }
+        finally { IsLoading = false; }
+    }
+
     private static List<SearchResult> ParseCategoryItems(Newtonsoft.Json.Linq.JObject json, string category, bool gamesOnly = false)
     {
         var results = new List<SearchResult>();
@@ -294,10 +352,15 @@ public class DiscoverViewModel : ViewModelBase
                 return null;
         }
 
+        var isFree = (bool?)item["is_free"] == true;
+        var finalPrice = (int?)item["final_price"];
+        var priceFormatted = isFree || finalPrice == 0 ? "Free" : finalPrice.HasValue ? $"${finalPrice.Value / 100.0:0.00}" : "";
+
         return new SearchResult
         {
             AppId = appId,
             Name = name,
+            PriceFormatted = priceFormatted,
             ImageUrl = headerImage
                     ?? item["capsule_image"]?.ToString()
                     ?? item["tiny_image"]?.ToString()

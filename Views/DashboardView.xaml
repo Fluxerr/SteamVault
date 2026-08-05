@@ -45,7 +45,7 @@
                 </Grid.ColumnDefinitions>
 
                 <Grid>
-                    <TextBox Text="{Binding AppIdInput, UpdateSourceTrigger=PropertyChanged}" 
+                    <TextBox x:Name="SearchTextBox" Text="{Binding AppIdInput, UpdateSourceTrigger=PropertyChanged}" 
                              Height="56" FontSize="16" VerticalContentAlignment="Center"
                              Padding="48,0,16,0" Tag="Search by game name or App ID">
                         <TextBox.InputBindings>
@@ -61,51 +61,56 @@
                                VerticalAlignment="Center" Margin="0,0,16,0"
                                Foreground="{DynamicResource PrimaryAccent}"
                                Visibility="{Binding IsSearching, Converter={StaticResource BoolToVis}}"/>
+
+                    <!-- Search Results Popup (overlays instead of pushing content) -->
+                    <Popup IsOpen="{Binding ShowSearchResults}" 
+                           PlacementTarget="{Binding ElementName=SearchTextBox}"
+                           Placement="Bottom" StaysOpen="False"
+                           AllowsTransparency="True" PopupAnimation="Fade"
+                           HorizontalOffset="0" Width="{Binding ActualWidth, ElementName=SearchTextBox}">
+                        <Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource SurfaceRaised}"
+                                Margin="4,4,4,8">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#000000" BlurRadius="20" Opacity="0.3" ShadowDepth="8"/>
+                            </Border.Effect>
+                            <ItemsControl ItemsSource="{Binding SearchResults}" MaxHeight="320">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="ResultItem" Background="Transparent" 
+                                                Padding="16,12" Cursor="Hand"
+                                                MouseLeftButtonDown="SearchResult_Click">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="80"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" CornerRadius="4" ClipToBounds="True" Width="72" Height="32">
+                                                    <Image Source="{Binding ImageUrl}" Stretch="UniformToFill"/>
+                                                </Border>
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}" 
+                                                           VerticalAlignment="Center" FontSize="14"
+                                                           TextTrimming="CharacterEllipsis" Margin="12,0"/>
+                                                <Border Grid.Column="2" Background="{DynamicResource SurfaceHover}" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding AppId}" Style="{DynamicResource MonoText}" FontSize="11" Foreground="{DynamicResource MutedText}"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <Trigger SourceName="ResultItem" Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ResultItem" Property="Background" Value="{DynamicResource SurfaceHover}"/>
+                                            </Trigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </Popup>
                 </Grid>
 
                 <Button Grid.Column="1" Content="Download Config" Width="180" Height="56" Margin="16,0,0,0" 
                         Command="{Binding DownloadCommand}" FontSize="15"/>
             </Grid>
-
-            <!-- Search Results Dropdown -->
-            <Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource SurfaceRaised}"
-                    Visibility="{Binding ShowSearchResults, Converter={StaticResource BoolToVis}}"
-                    Margin="0,0,196,16">
-                <Border.Effect>
-                    <DropShadowEffect Color="#000000" BlurRadius="20" Opacity="0.3" ShadowDepth="8"/>
-                </Border.Effect>
-                <ItemsControl ItemsSource="{Binding SearchResults}" MaxHeight="320">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border x:Name="ResultItem" Background="Transparent" 
-                                    Padding="16,12" Cursor="Hand"
-                                    MouseLeftButtonDown="SearchResult_Click">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" CornerRadius="4" ClipToBounds="True" Width="72" Height="32">
-                                        <Image Source="{Binding ImageUrl}" Stretch="UniformToFill"/>
-                                    </Border>
-                                    <TextBlock Grid.Column="1" Text="{Binding Name}" 
-                                               VerticalAlignment="Center" FontSize="14"
-                                               TextTrimming="CharacterEllipsis" Margin="12,0"/>
-                                    <Border Grid.Column="2" Background="{DynamicResource SurfaceHover}" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding AppId}" Style="{DynamicResource MonoText}" FontSize="11" Foreground="{DynamicResource MutedText}"/>
-                                    </Border>
-                                </Grid>
-                            </Border>
-                            <DataTemplate.Triggers>
-                                <Trigger SourceName="ResultItem" Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="ResultItem" Property="Background" Value="{DynamicResource SurfaceHover}"/>
-                                </Trigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Border>
 
             <!-- Progress & Error (Shown when Game Card is hidden) -->
             <StackPanel Margin="0,0,0,24">
@@ -121,7 +126,7 @@
                         Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE783;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource ErrorBrush}" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Download failed - check the App ID or connectivity" Foreground="{DynamicResource ErrorBrush}" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource ErrorBrush}" FontSize="14" FontWeight="Medium" VerticalAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -242,7 +247,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Featured Configs" Style="{DynamicResource SectionHeader}" Margin="0"/>
+                        <TextBlock Text="Recently Downloaded" Style="{DynamicResource SectionHeader}" Margin="0"/>
                         <Button Grid.Column="1" Command="{Binding ViewAllCommand}" Style="{DynamicResource GhostButton}"
                                 Padding="8,4" BorderThickness="0" FontSize="12">
                             <StackPanel Orientation="Horizontal">

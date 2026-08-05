@@ -40,7 +40,7 @@ public class MyGamesViewModel : ViewModelBase
         UpdateAllCommand = new RelayCommand(async _ => await UpdateAllGamesAsync(), _ => CanUpdateAll && !IsUpdatingAll && !IsScanning);
         SelectGameCommand = new RelayCommand(param => SelectGame(param as LibraryEntry));
         BackToGridCommand = new RelayCommand(_ => SelectGame(null));
-        DeleteGameCommand = new RelayCommand(async param => await DeleteGameAsync(param as LibraryEntry), _ => ShowGameDetail && !IsDeleting);
+        DeleteGameCommand = new RelayCommand(param => DeleteGame(param as LibraryEntry), _ => ShowGameDetail && !IsDeleting);
         LaunchGameCommand = new RelayCommand(param => LaunchGame(param as LibraryEntry), _ => ShowGameDetail && _selectedGame?.IsInstalled == true);
         OpenInstallFolderCommand = new RelayCommand(param => OpenInstallFolder(param as LibraryEntry), _ => ShowGameDetail && _selectedGame?.IsInstalled == true);
         OpenLuaFolderCommand = new RelayCommand(param => OpenLuaFolder(param as LibraryEntry));
@@ -439,7 +439,7 @@ public class MyGamesViewModel : ViewModelBase
             : "Not installed — use Dashboard to install via Steam first.";
     }
 
-    private async Task DeleteGameAsync(LibraryEntry? entry)
+    private void DeleteGame(LibraryEntry? entry)
     {
         if (entry == null || IsDeleting) return;
         IsDeleting = true;

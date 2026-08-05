@@ -78,6 +78,7 @@ public class MainViewModel : ViewModelBase
     {
         _settingsService = settingsService;
 
+        MyGamesVM = new MyGamesViewModel(settingsService, steamApi, depotKeyService, luaParser, downloadService, gameMgmtService);
         DashboardVM = new DashboardViewModel(downloadService, searchService, steamApi, luaParser, settingsService, gameMgmtService, depotKeyService);
         DashboardVM.NavigateToLibrary = () => CurrentView = MyGamesVM;
         DashboardVM.NavigateToLibraryAndUpdate = () =>
@@ -86,8 +87,7 @@ public class MainViewModel : ViewModelBase
             _ = MyGamesVM.RefreshAsync();
         };
         SettingsVM = new SettingsViewModel(settingsService, depotKeyService, exportService);
-        MyGamesVM = new MyGamesViewModel(settingsService, steamApi, depotKeyService, luaParser, downloadService, gameMgmtService);
-        DiscoverVM = new DiscoverViewModel(steamApi, downloadService);
+        DiscoverVM = new DiscoverViewModel(steamApi, downloadService, searchService);
         OnlineVM = new OnlineViewModel(settingsService, steamApi, luaParser, onlineFixService);
 
         CurrentView = DashboardVM; // Default view

@@ -162,6 +162,7 @@ public class SettingsViewModel : ViewModelBase
             var parts = new List<string>();
             if (_depotKeyService.LocalKeyCount > 0) parts.Add($"Local: {_depotKeyService.LocalKeyCount:N0}");
             if (_depotKeyService.AppDataKeyCount > 0) parts.Add($"Synced: {_depotKeyService.AppDataKeyCount:N0}");
+            if (_depotKeyService.RemoteConfigKeyCount > 0) parts.Add($"Remote: {_depotKeyService.RemoteConfigKeyCount:N0}");
             if (_depotKeyService.CachedKeyCount > 0) parts.Add($"Live API: {_depotKeyService.CachedKeyCount:N0}");
             if (_depotKeyService.ScrapedKeyCount > 0) parts.Add($"Community: {_depotKeyService.ScrapedKeyCount:N0}");
             if (_depotKeyService.DerivedKeyCount > 0) parts.Add($"Derived: {_depotKeyService.DerivedKeyCount:N0}");
@@ -248,7 +249,7 @@ public class SettingsViewModel : ViewModelBase
         {
             IsRescanning = false;
             // Clear after delay
-            Task.Delay(5000).ContinueWith(_ =>
+            _ = Task.Delay(5000).ContinueWith(_ =>
             {
                 System.Windows.Application.Current?.Dispatcher.Invoke(() =>
                     RescanStatusMessage = "");

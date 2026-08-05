@@ -228,7 +228,7 @@ public class AutoUpdateService
 
             if (enabled)
             {
-                var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                var exePath = Environment.ProcessPath;
                 if (!string.IsNullOrWhiteSpace(exePath))
                 {
                     key.SetValue("SteamVault", $"\"{exePath}\" --silent");

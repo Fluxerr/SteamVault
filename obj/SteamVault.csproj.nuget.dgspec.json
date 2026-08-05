@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\SteamVault.csproj": {}
+    "C:\\Users\\Cilliain\\Desktop\\SteamVault Source\\SteamVault\\SteamVault.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\SteamVault.csproj": {
+    "C:\\Users\\Cilliain\\Desktop\\SteamVault Source\\SteamVault\\SteamVault.csproj": {
       "version": "2.5.1",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\SteamVault.csproj",
+        "projectUniqueName": "C:\\Users\\Cilliain\\Desktop\\SteamVault Source\\SteamVault\\SteamVault.csproj",
         "projectName": "SteamVault",
-        "projectPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\SteamVault.csproj",
+        "projectPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault Source\\SteamVault\\SteamVault.csproj",
         "packagesPath": "C:\\Users\\Cilliain\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault\\SteamVault\\obj\\",
+        "outputPath": "C:\\Users\\Cilliain\\Desktop\\SteamVault Source\\SteamVault\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -50,6 +50,10 @@
         "net9.0-windows7.0": {
           "targetAlias": "net9.0-windows",
           "dependencies": {
+            "DiscordRichPresence": {
+              "target": "Package",
+              "version": "[1.6.1.70, )"
+            },
             "Microsoft.NET.ILLink.Tasks": {
               "suppressParent": "All",
               "target": "Package",
@@ -66,7 +70,7 @@
             },
             "SharpCompress": {
               "target": "Package",
-              "version": "[0.38.0, )"
+              "version": "[0.50.0, )"
             },
             "SteamKit2": {
               "target": "Package",

@@ -231,7 +231,7 @@ public class OnlineFixService
 
             onStatus?.Invoke("Extracting fix files (password-protected)...");
 
-            using var archive = RarArchive.Open(rarPath, new ReaderOptions { Password = RarPassword });
+            using var archive = ArchiveFactory.OpenArchive(rarPath, new ReaderOptions { Password = RarPassword });
 
             var entries = archive.Entries.ToList();
             if (entries.Count == 0)

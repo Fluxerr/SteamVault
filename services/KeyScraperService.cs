@@ -30,6 +30,12 @@ public class KeyScraperService
     /// </summary>
     private static readonly List<(string Name, string KeysUrl, string TokensUrl)> CommunityRepos = new()
     {
+        // ── YOUR personal key repo (HIGHEST PRIORITY) ──
+        // Push updated depotkeys.json / appaccesstokens.json here to instantly update all app users.
+        ("SteamVaultKeys (owner)",
+         "https://raw.githubusercontent.com/Fluxerr/SteamVaultKeys/main/depotkeys.json",
+         "https://raw.githubusercontent.com/Fluxerr/SteamVaultKeys/main/appaccesstokens.json"),
+
         // Primary ManifestHub (bsinwhg)
         ("ManifestHub (primary)",
          "https://raw.githubusercontent.com/bsinwhg/ManifestHub/main/depotkeys.json",

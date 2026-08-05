@@ -9,7 +9,7 @@
 ![.NET 9](https://img.shields.io/badge/.NET-9.0-7C3AED?logo=dotnet)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-06B6D4?logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-10B981)
-![Release](https://img.shields.io/badge/Release-v2.0-8B5CF6)
+![Release](https://img.shields.io/badge/Release-v2.5.2-8B5CF6)
 
 ---
 

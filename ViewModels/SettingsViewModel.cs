@@ -2,6 +2,7 @@ using SteamVault.Models;
 using SteamVault.Services;
 using System.Windows;
 using System.Windows.Input;
+using System.Collections.ObjectModel;
 using WpfApplication = System.Windows.Application;
 
 namespace SteamVault.ViewModels;
@@ -24,7 +25,16 @@ public class SettingsViewModel : ViewModelBase
         ExportLuaCommand = new RelayCommand(async _ => await ExportLuaAsync(), _ => !IsExporting);
         ChangeThemeCommand = new RelayCommand(param => ChangeTheme(param as string));
         JoinDiscordCommand = new RelayCommand(_ => OpenDiscord());
+        ClearAccentCommand = new RelayCommand(_ => SelectedCustomAccent = "");
+        SetAccentCommand = new RelayCommand(param => SelectedCustomAccent = (param as string) ?? "");
+        ShowWhatsNewCommand = new RelayCommand(_ => ShowWhatsNew());
+
+        LoadThemePreviews();
     }
+
+    public ICommand ClearAccentCommand { get; }
+    public ICommand SetAccentCommand { get; }
+    public ICommand ShowWhatsNewCommand { get; }
 
     public AppSettings Settings => _settingsService.Settings;
 
@@ -35,25 +45,16 @@ public class SettingsViewModel : ViewModelBase
     public ICommand ChangeThemeCommand { get; }
     public ICommand JoinDiscordCommand { get; }
 
-    // Auto-update toggle
+    // Auto-update toggle (Temporarily Disabled)
     public bool AutoUpdateEnabled
     {
-        get => _settingsService.Settings.AutoUpdateEnabled;
+        get => false;
         set
         {
-            if (_settingsService.Settings.AutoUpdateEnabled == value) return;
-            _settingsService.Settings.AutoUpdateEnabled = value;
+            _settingsService.Settings.AutoUpdateEnabled = false;
             OnPropertyChanged();
-
-            // Register/unregister from Windows startup
-            AutoUpdateService.SetStartupEnabled(value);
+            AutoUpdateService.SetStartupEnabled(false);
             _settingsService.Save();
-
-            StatusMessage = value
-                ? "Auto-update enabled — SteamVault will start with Windows."
-                : "Auto-update disabled — SteamVault won't start automatically.";
-
-            ClearStatusAfterDelay();
         }
     }
 
@@ -136,10 +137,82 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    public List<string> AvailableThemes { get; } = new()
+    public ObservableCollection<ThemePreview> ThemePreviews { get; } = new();
+
+    public ObservableCollection<string> CustomAccentColors { get; } = new()
     {
-        "Dark", "AmoledBlack", "MidnightBlue", "SlateGray", "EmeraldNight"
+        "#8839EF", // Purple (Default)
+        "#BB9AF7", // Lilac
+        "#89B4FA", // Blue
+        "#88C0D0", // Frost
+        "#A6E3A1", // Green
+        "#A3BE8C", // Aurora Green
+        "#EBCB8B", // Yellow
+        "#FABD2F", // Gruvbox Yellow
+        "#FE8019", // Orange
+        "#EBBCBA", // Rose
+        "#F38BA8", // Pink
+        "#F7768E", // Tokyo Red
     };
+
+    public string SelectedCustomAccent
+    {
+        get => _settingsService.Settings.CustomAccentColor ?? "";
+        set
+        {
+            _settingsService.Settings.CustomAccentColor = value;
+            OnPropertyChanged();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                ThemeManager.ApplyCustomAccent(value);
+            }
+            else
+            {
+                ThemeManager.ApplyTheme(_settingsService.Settings.Theme); // reset to base
+            }
+            _settingsService.Save();
+        }
+    }
+
+    public void LoadThemePreviews()
+    {
+        var themes = new[] { "Gruvbox", "Dracula", "TokyoNight", "Nord", "CatppuccinMocha", "CatppuccinLatte", "RosePine", "Emerald", "Midnight", "OLED", "Slate", "Dark", "Metro" };
+        ThemePreviews.Clear();
+        foreach (var t in themes)
+        {
+            var colors = ThemeManager.GetThemePreviewColors(t);
+            ThemePreviews.Add(new ThemePreview
+            {
+                Name = t,
+                DisplayName = GetThemeDisplayName(t),
+                BackgroundHex = ToHex(colors.Background),
+                SurfaceHex = ToHex(colors.Surface),
+                AccentHex = ToHex(colors.Accent),
+                TextHex = ToHex(colors.Text),
+                IsSelected = t == _settingsService.Settings.Theme,
+                IsCommunity = t == "Metro"
+            });
+        }
+    }
+
+    private static string GetThemeDisplayName(string name) => name switch
+    {
+        "Gruvbox" => "Gruvbox Dark",
+        "Dracula" => "Dracula",
+        "TokyoNight" => "Tokyo Night",
+        "Nord" => "Nordic Frost",
+        "CatppuccinMocha" => "Catppuccin Mocha",
+        "CatppuccinLatte" => "Catppuccin Latte",
+        "RosePine" => "Rosé Pine",
+        "Emerald" => "Emerald Forest",
+        "Midnight" => "Deep Midnight",
+        "OLED" => "OLED Pure Black",
+        "Slate" => "Slate Charcoal",
+        "Dark" => "Classic Violet",
+        _ => name
+    };
+
+    private string ToHex(System.Windows.Media.Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
 
     public string DatabaseStats
     {
@@ -180,13 +253,10 @@ public class SettingsViewModel : ViewModelBase
         ClearStatusAfterDelay();
     }
 
-    private void ClearStatusAfterDelay()
+    private async void ClearStatusAfterDelay()
     {
-        Task.Delay(3000).ContinueWith(_ =>
-        {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-                StatusMessage = "");
-        });
+        await Task.Delay(3000);
+        StatusMessage = "";
     }
 
     private async Task SyncDatabaseAsync()
@@ -315,12 +385,19 @@ public class SettingsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(themeName)) return;
 
         _settingsService.Settings.Theme = themeName;
+        ThemeManager.ApplyTheme(themeName);
         _settingsService.Save();
-
-        WpfApplication.Current?.Dispatcher.Invoke(() =>
+        
+        SelectedTheme = themeName;
+        
+        // Update selection states
+        foreach (var p in ThemePreviews)
         {
-            ThemeManager.ApplyTheme(themeName);
-        });
+            p.IsSelected = p.Name == themeName;
+        }
+
+        StatusMessage = $"Theme changed to {themeName}";
+        ClearStatusAfterDelay();
     }
 
     private void OpenDiscord()
@@ -338,4 +415,47 @@ public class SettingsViewModel : ViewModelBase
             System.Diagnostics.Debug.WriteLine($"Failed to open Discord: {ex.Message}");
         }
     }
+
+    private void ShowWhatsNew()
+    {
+        try
+        {
+            var version = AppUpdaterService.GetCurrentVersion();
+            var versionStr = $"{version.Major}.{version.Minor}.{version.Build}";
+            var vm = new WhatsNewViewModel();
+            vm.LoadReleaseNotes(versionStr);
+
+            var mainWindow = WpfApplication.Current.MainWindow;
+            var whatsNewWindow = new SteamVault.Views.WhatsNewWindow
+            {
+                DataContext = vm,
+                Owner = mainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            whatsNewWindow.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to open WhatsNew: {ex.Message}");
+        }
+    }
+}
+
+public class ThemePreview : ViewModelBase
+{
+    public string Name { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string BackgroundHex { get; set; } = "";
+    public string SurfaceHex { get; set; } = "";
+    public string AccentHex { get; set; } = "";
+    public string TextHex { get; set; } = "";
+
+    private bool _isSelected;
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
+    }
+    
+    public bool IsCommunity { get; set; }
 }

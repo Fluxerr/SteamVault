@@ -204,11 +204,12 @@ public partial class OnlineFixBrowserWindow : Window
             await Browser.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(AdBlockJS);
 
             // Targeted filter: inject correct Referer for download requests.
-            // Only fires for uploads.online-fix* — no perf impact unlike wildcard.
             Browser.CoreWebView2.AddWebResourceRequestedFilter(
                 "*://*.online-fix.me/*", CoreWebView2WebResourceContext.All);
             Browser.CoreWebView2.AddWebResourceRequestedFilter(
                 "*://online-fix.me/*", CoreWebView2WebResourceContext.All);
+            Browser.CoreWebView2.AddWebResourceRequestedFilter(
+                "https://cdn.discordapp.com/avatars/*", CoreWebView2WebResourceContext.Image);
             Browser.CoreWebView2.WebResourceRequested += OnWebResourceRequested;
 
             // Wire up events
@@ -238,8 +239,9 @@ public partial class OnlineFixBrowserWindow : Window
 
     private void OnWebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
     {
-        e.Request.Headers.SetHeader("Referer", "https://online-fix.me/");
+        try { e.Request?.Headers.SetHeader("Referer", "https://online-fix.me/"); } catch { }
     }
+
 
     // ──────────────────────────────────────────────────────────
     //  Navigation-level: cancel redirects to loot-reward / ad sites

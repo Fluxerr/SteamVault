@@ -1,0 +1,62 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ═══ Color Palette — Tokyo Night ═══ -->
+    <Color x:Key="WindowBackgroundColor">#1A1B26</Color>
+    <Color x:Key="SidebarBackgroundColor">#16161E</Color>
+    <Color x:Key="SurfaceBaseColor">#24283B</Color>
+    <Color x:Key="SurfaceRaisedColor">#292E42</Color>
+    <Color x:Key="SurfaceHoverColor">#3B4261</Color>
+    
+    <Color x:Key="PrimaryAccentColor">#7AA2F7</Color>
+    <Color x:Key="PrimaryAccentHoverColor">#89B4FA</Color>
+    <Color x:Key="PrimaryAccentMutedColor">#283457</Color>
+    <Color x:Key="PrimaryAccentGlowColor">#BB9AF7</Color>
+    
+    <Color x:Key="SuccessColor">#73DACA</Color>
+    <Color x:Key="WarningColor">#E0AF68</Color>
+    <Color x:Key="ErrorColor">#F7768E</Color>
+    
+    <Color x:Key="TextColor">#C0CAF5</Color>
+    <Color x:Key="MutedTextColor">#A9B1D6</Color>
+    <Color x:Key="DimTextColor">#565F89</Color>
+    
+    <Color x:Key="BorderColor">#292E42</Color>
+
+    <!-- ═══ Solid Brushes ═══ -->
+    <SolidColorBrush x:Key="WindowBackground" Color="{StaticResource WindowBackgroundColor}" />
+    <SolidColorBrush x:Key="SidebarBackground" Color="{StaticResource SidebarBackgroundColor}" />
+    <SolidColorBrush x:Key="SurfaceBase" Color="{StaticResource SurfaceBaseColor}" />
+    <SolidColorBrush x:Key="SurfaceRaised" Color="{StaticResource SurfaceRaisedColor}" />
+    <SolidColorBrush x:Key="SurfaceHover" Color="{StaticResource SurfaceHoverColor}" />
+    
+    <SolidColorBrush x:Key="PrimaryAccent" Color="{StaticResource PrimaryAccentColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentHover" Color="{StaticResource PrimaryAccentHoverColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentMuted" Color="{StaticResource PrimaryAccentMutedColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentGlow" Color="{StaticResource PrimaryAccentGlowColor}" />
+    
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+    
+    <SolidColorBrush x:Key="Text" Color="{StaticResource TextColor}" />
+    <SolidColorBrush x:Key="MutedText" Color="{StaticResource MutedTextColor}" />
+    <SolidColorBrush x:Key="DimText" Color="{StaticResource DimTextColor}" />
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="InputBackground" Color="{StaticResource SurfaceBaseColor}" />
+
+    <!-- ═══ Theme Decoration (Lantern) ═══ -->
+    <DrawingBrush x:Key="ThemeTopBarDecoration" Stretch="Uniform" TileMode="Tile" Viewport="0,0,120,120" ViewportUnits="Absolute" Opacity="0.15">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing>
+                <GeometryDrawing.Pen>
+                    <Pen Brush="{DynamicResource PrimaryAccent}" Thickness="2.5" StartLineCap="Round" EndLineCap="Round" />
+                </GeometryDrawing.Pen>
+                <GeometryDrawing.Geometry>
+                    <!-- Lantern Path -->
+                    <PathGeometry Figures="M50,20 L70,20 M45,20 Q40,50 45,80 M75,20 Q80,50 75,80 M45,80 L75,80 M60,10 L60,20 M60,80 L60,95 M30,50 L90,50" />
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+</ResourceDictionary>

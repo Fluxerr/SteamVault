@@ -182,4 +182,5 @@ public class SearchResult
     public string PriceFormatted { get; set; } = "";
     public string Developer { get; set; } = "";
     public string SizeFormatted { get; set; } = "";
+    public string Category { get; set; } = "";
 }

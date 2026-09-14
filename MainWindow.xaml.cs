@@ -38,7 +38,7 @@ public partial class MainWindow : Window
 
         if (e.NewValue is InstallationViewModel)
         {
-            // Installation is a full-width focused flow.
+            // Full-width focused flow (Installation).
             SidebarPanel.Visibility = Visibility.Collapsed;
             DiscordButton.Visibility = Visibility.Collapsed;
             SidebarColumn.Width = new GridLength(0);
@@ -53,12 +53,35 @@ public partial class MainWindow : Window
         }
     }
 
+    private ViewModelBase? _previousView;
+
+    private int GetViewDepth(ViewModelBase? vm)
+    {
+        return vm switch
+        {
+            DashboardViewModel => 0,
+            DiscoverViewModel => 1,
+            MyGamesViewModel => 2,
+            OnlineViewModel => 3,
+            StatsViewModel => 4,
+            SettingsViewModel => 5,
+            _ => 0
+        };
+    }
+
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (sender is not MainViewModel vm) return;
 
         if (e.PropertyName == nameof(MainViewModel.CurrentView) && IsLoaded)
         {
+            int oldDepth = GetViewDepth(_previousView);
+            int newDepth = GetViewDepth(vm.CurrentView);
+            _previousView = vm.CurrentView;
+
+            double fromX = newDepth > oldDepth ? 30 : -30;
+            if (newDepth == oldDepth) fromX = 20;
+
             var fadeOut = new DoubleAnimation(0.0, TimeSpan.FromSeconds(0.08));
             var fadeIn = new DoubleAnimation(1.0, TimeSpan.FromSeconds(0.15))
             {
@@ -66,8 +89,37 @@ public partial class MainWindow : Window
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             };
 
+            var slideIn = new DoubleAnimation(fromX, 0, TimeSpan.FromSeconds(0.25))
+            {
+                BeginTime = TimeSpan.FromSeconds(0.05),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
             MainContentHost.BeginAnimation(OpacityProperty, fadeOut);
             MainContentHost.BeginAnimation(OpacityProperty, fadeIn);
+
+            if (MainContentHost.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.XProperty, slideIn);
+            }
+            else
+            {
+                var newTransform = new TranslateTransform(fromX, 0);
+                MainContentHost.RenderTransform = newTransform;
+                newTransform.BeginAnimation(TranslateTransform.XProperty, slideIn);
+            }
+        }
+    }
+
+    private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+        {
+            try
+            {
+                DragMove();
+            }
+            catch { }
         }
     }
 

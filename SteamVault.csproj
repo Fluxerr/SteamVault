@@ -9,17 +9,21 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>SteamVault</AssemblyName>
     <RootNamespace>SteamVault</RootNamespace>
-    <Version>2.5.2</Version>
+    <Version>2.6.0</Version>
     <Authors>SteamVault</Authors>
     <Description>Offline Steam depot manifest manager — download, manage, and keep your Steam game configurations up to date with no Steam client required.</Description>
     <Copyright>MIT License</Copyright>
     <!-- Application icon — used for EXE icon, taskbar, system tray -->
     <ApplicationIcon>SteamVault.ico</ApplicationIcon>
-    <!-- Single-file self-contained publish: bundles the app, .NET runtime, and all content (DLLs, JSON data) into one EXE -->
-    <PublishSingleFile>true</PublishSingleFile>
+    <!-- Self-contained publish bundles the .NET runtime. -->
     <SelfContained>true</SelfContained>
-    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    
+    <!-- SINGLE FILE EXE PUBLISH: -->
+    <!-- For the standalone EXE version, uncomment the 3 lines below or publish with /p:PublishSingleFile=true -->
+    <!-- <PublishSingleFile>true</PublishSingleFile> -->
+    <!-- <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract> -->
+    <!-- <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract> -->
+
     <DebugType>embedded</DebugType>
     <!-- Optional: trim unused assemblies for smaller output -->
     <!-- <PublishTrimmed>true</PublishTrimmed> -->
@@ -34,14 +38,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Data\appaccesstokens.json">
+    <Content Include="Data\appaccesstokens.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-    </None>
-    <None Update="Data\depotkeys.json">
+    </Content>
+    <Content Include="Data\depotkeys.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-    </None>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -57,8 +61,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Embed the ICO as a resource for tray icon and window icon -->
+    <!-- Embed the ICO and Discord logo as WPF resources -->
     <Resource Include="SteamVault.ico" />
+    <Resource Include="Discord.png" />
   </ItemGroup>
 
 </Project>

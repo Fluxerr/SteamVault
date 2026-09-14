@@ -3,6 +3,7 @@ using SharpCompress.Archives.Rar;
 using SharpCompress.Common;
 using SharpCompress.Readers;
 using System.IO;
+using System.IO.Compression;
 
 namespace SteamVault.Services;
 
@@ -296,6 +297,75 @@ public class OnlineFixService
         {
             // Clean up the RAR file after extraction attempt (keep it on permission denied for retry)
             CleanupTempFile(rarPath);
+        }
+    }
+
+    /// <summary>
+    /// Attempts to extract a standard ZIP archive (from lua.tools API) into the game's install directory.
+    /// Deletes the ZIP file after extraction.
+    /// Returns (result, errorMessage).
+    /// </summary>
+    public (ExtractResult Result, string? Error) ExtractZipToGameDir(string zipPath, string gameDir, Action<string>? onStatus = null)
+    {
+        try
+        {
+            onStatus?.Invoke("Checking ZIP file...");
+
+            if (!File.Exists(zipPath))
+                return (ExtractResult.Failed, "ZIP file not found.");
+
+            if (!Directory.Exists(gameDir))
+            {
+                try { Directory.CreateDirectory(gameDir); }
+                catch (UnauthorizedAccessException)
+                {
+                    return (ExtractResult.PermissionDenied, "Permission denied — the game folder is in a protected location.");
+                }
+            }
+
+            onStatus?.Invoke("Extracting fix files...");
+
+            using var archive = System.IO.Compression.ZipFile.OpenRead(zipPath);
+            int failed = 0;
+            foreach (var entry in archive.Entries)
+            {
+                if (string.IsNullOrEmpty(entry.Name)) continue; // directory entry
+                string dest = Path.Combine(gameDir, entry.FullName);
+                try
+                {
+                    var destDir = Path.GetDirectoryName(dest);
+                    if (!string.IsNullOrEmpty(destDir))
+                        Directory.CreateDirectory(destDir);
+                    
+                    entry.ExtractToFile(dest, overwrite: true);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return (ExtractResult.PermissionDenied, "Permission denied — the game folder is in a protected location.");
+                }
+                catch { failed++; }
+            }
+
+            onStatus?.Invoke("✓ Fix applied successfully!");
+
+            var markerPath = Path.Combine(gameDir, ".steamvault_fix_applied");
+            File.WriteAllText(markerPath, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+
+            return (failed == 0 ? ExtractResult.Success : ExtractResult.Failed, 
+                    failed == 0 ? null : $"Partially applied (failed to extract {failed} files).");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return (ExtractResult.PermissionDenied, "Permission denied — the game folder is in a protected location.");
+        }
+        catch (Exception ex)
+        {
+            return (ExtractResult.Failed, $"Extraction failed: {ex.Message}");
+        }
+        finally
+        {
+            // We want to keep the zip file around if we need to retry as admin
+            // We'll clean it up manually if we retry as admin, or it will be overwritten next time
         }
     }
 

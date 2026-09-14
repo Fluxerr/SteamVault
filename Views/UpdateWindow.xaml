@@ -1,0 +1,113 @@
+<Window x:Class="SteamVault.Views.UpdateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SteamVault.Views"
+        mc:Ignorable="d"
+        Title="SteamVault Updater" Height="250" Width="480"
+        WindowStyle="None" ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
+        AllowsTransparency="True" Background="Transparent"
+        Topmost="True">
+    <Window.Resources>
+        <Style TargetType="ProgressBar">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaised}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryAccent}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid x:Name="TemplateRoot">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="4"/>
+                            <Rectangle x:Name="PART_Track"/>
+                            <Grid x:Name="PART_Indicator" HorizontalAlignment="Left">
+                                <Border Background="{TemplateBinding Foreground}" CornerRadius="4"/>
+                            </Grid>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="{DynamicResource WindowBackground}" 
+            CornerRadius="16" 
+            BorderBrush="{DynamicResource BorderBrush}" 
+            BorderThickness="1"
+            Margin="10">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="24" ShadowDepth="4" Opacity="0.45"/>
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Top Accent Line -->
+            <Border Grid.Row="0" Height="2" VerticalAlignment="Top" CornerRadius="16,16,0,0" Background="{DynamicResource PrimaryAccent}" Panel.ZIndex="10"/>
+
+            <!-- Top Banner Header with Dynamic Theme Graphic -->
+            <Border Grid.Row="0" CornerRadius="15,15,0,0" ClipToBounds="True" Height="75">
+                <Grid>
+                    <!-- Base background layer -->
+                    <Rectangle Fill="{DynamicResource SurfaceBase}"/>
+                    
+                    <!-- Theme Graphic Pattern Overlay (Cherry Blossom for Gruvbox, Lantern for TokyoNight, etc.) -->
+                    <Rectangle Fill="{DynamicResource ThemeTopBarDecoration}" Opacity="0.25" IsHitTestVisible="False"/>
+                    
+                    <!-- Gradient Fade for seamless transition -->
+                    <Rectangle>
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="Transparent" Offset="0.0"/>
+                                <GradientStop Color="#22000000" Offset="1.0"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
+                    <!-- Header Content -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,20,0">
+                        <Border Width="42" Height="42" CornerRadius="10" Background="{DynamicResource SurfaceRaised}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,14,0">
+                            <Image Source="pack://application:,,,/SteamVault;component/SteamVault.ico" 
+                                   Width="26" Height="26" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                   UseLayoutRounding="True"
+                                   SnapsToDevicePixels="True"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="SteamVault Auto-Updater" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Text}"/>
+                            <TextBlock Text="{Binding VersionInfo}" FontSize="12" Foreground="{DynamicResource PrimaryAccent}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Main Body Content -->
+            <Grid Grid.Row="1" Margin="20,15,20,20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Status Detail Card -->
+                <Border Grid.Row="0" Background="{DynamicResource SurfaceBase}" CornerRadius="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14">
+                    <Grid VerticalAlignment="Center">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="{Binding StatusText}" FontSize="13" Foreground="{DynamicResource Text}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        
+                        <ProgressBar Grid.Row="1" IsIndeterminate="{Binding IsIndeterminate}" Value="{Binding ProgressValue}" Maximum="100"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
+
+

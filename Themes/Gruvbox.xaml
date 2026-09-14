@@ -1,0 +1,62 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ═══ Color Palette — Gruvbox Dark ═══ -->
+    <Color x:Key="WindowBackgroundColor">#282828</Color>
+    <Color x:Key="SidebarBackgroundColor">#1D2021</Color>
+    <Color x:Key="SurfaceBaseColor">#3C3836</Color>
+    <Color x:Key="SurfaceRaisedColor">#504945</Color>
+    <Color x:Key="SurfaceHoverColor">#665C54</Color>
+    
+    <Color x:Key="PrimaryAccentColor">#FE8019</Color>
+    <Color x:Key="PrimaryAccentHoverColor">#FABD2F</Color>
+    <Color x:Key="PrimaryAccentMutedColor">#5C3A10</Color>
+    <Color x:Key="PrimaryAccentGlowColor">#FABD2F</Color>
+    
+    <Color x:Key="SuccessColor">#B8BB26</Color>
+    <Color x:Key="WarningColor">#FABD2F</Color>
+    <Color x:Key="ErrorColor">#FB4934</Color>
+    
+    <Color x:Key="TextColor">#EBDBB2</Color>
+    <Color x:Key="MutedTextColor">#D5C4A1</Color>
+    <Color x:Key="DimTextColor">#928374</Color>
+    
+    <Color x:Key="BorderColor">#504945</Color>
+
+    <!-- ═══ Solid Brushes ═══ -->
+    <SolidColorBrush x:Key="WindowBackground" Color="{StaticResource WindowBackgroundColor}" />
+    <SolidColorBrush x:Key="SidebarBackground" Color="{StaticResource SidebarBackgroundColor}" />
+    <SolidColorBrush x:Key="SurfaceBase" Color="{StaticResource SurfaceBaseColor}" />
+    <SolidColorBrush x:Key="SurfaceRaised" Color="{StaticResource SurfaceRaisedColor}" />
+    <SolidColorBrush x:Key="SurfaceHover" Color="{StaticResource SurfaceHoverColor}" />
+    
+    <SolidColorBrush x:Key="PrimaryAccent" Color="{StaticResource PrimaryAccentColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentHover" Color="{StaticResource PrimaryAccentHoverColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentMuted" Color="{StaticResource PrimaryAccentMutedColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentGlow" Color="{StaticResource PrimaryAccentGlowColor}" />
+    
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+    
+    <SolidColorBrush x:Key="Text" Color="{StaticResource TextColor}" />
+    <SolidColorBrush x:Key="MutedText" Color="{StaticResource MutedTextColor}" />
+    <SolidColorBrush x:Key="DimText" Color="{StaticResource DimTextColor}" />
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="InputBackground" Color="{StaticResource SurfaceBaseColor}" />
+
+    <!-- ═══ Theme Decoration (Cherry Blossom) ═══ -->
+    <DrawingBrush x:Key="ThemeTopBarDecoration" Stretch="Uniform" TileMode="Tile" Viewport="0,0,120,120" ViewportUnits="Absolute" Opacity="0.15">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing>
+                <GeometryDrawing.Pen>
+                    <Pen Brush="{DynamicResource PrimaryAccent}" Thickness="2.5" StartLineCap="Round" EndLineCap="Round" />
+                </GeometryDrawing.Pen>
+                <GeometryDrawing.Geometry>
+                    <!-- Flower Path -->
+                    <PathGeometry Figures="M60,60 Q40,20 60,10 Q80,20 60,60 M60,60 Q100,40 110,60 Q100,80 60,60 M60,60 Q80,100 60,110 Q40,100 60,60 M60,60 Q20,80 10,60 Q20,40 60,60 M60,55 A5,5 0 1,1 60,65 A5,5 0 1,1 60,55" />
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+</ResourceDictionary>

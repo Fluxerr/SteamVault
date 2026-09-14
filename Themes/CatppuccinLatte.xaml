@@ -1,0 +1,62 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ═══ Color Palette — Catppuccin Latte (Rich Cream Latte) ═══ -->
+    <Color x:Key="WindowBackgroundColor">#FDF6E3</Color>
+    <Color x:Key="SidebarBackgroundColor">#F5E6C8</Color>
+    <Color x:Key="SurfaceBaseColor">#EBE0C8</Color>
+    <Color x:Key="SurfaceRaisedColor">#E0D4BA</Color>
+    <Color x:Key="SurfaceHoverColor">#D4C7A8</Color>
+    
+    <Color x:Key="PrimaryAccentColor">#E67E80</Color>
+    <Color x:Key="PrimaryAccentHoverColor">#E69898</Color>
+    <Color x:Key="PrimaryAccentMutedColor">#F2D5CE</Color>
+    <Color x:Key="PrimaryAccentGlowColor">#EA76CB</Color>
+    
+    <Color x:Key="SuccessColor">#A6D189</Color>
+    <Color x:Key="WarningColor">#E5C890</Color>
+    <Color x:Key="ErrorColor">#E67E80</Color>
+    
+    <Color x:Key="TextColor">#4C4F69</Color>
+    <Color x:Key="MutedTextColor">#6C6F85</Color>
+    <Color x:Key="DimTextColor">#9CA0B0</Color>
+    
+    <Color x:Key="BorderColor">#E0D4BA</Color>
+
+    <!-- ═══ Solid Brushes ═══ -->
+    <SolidColorBrush x:Key="WindowBackground" Color="{StaticResource WindowBackgroundColor}" />
+    <SolidColorBrush x:Key="SidebarBackground" Color="{StaticResource SidebarBackgroundColor}" />
+    <SolidColorBrush x:Key="SurfaceBase" Color="{StaticResource SurfaceBaseColor}" />
+    <SolidColorBrush x:Key="SurfaceRaised" Color="{StaticResource SurfaceRaisedColor}" />
+    <SolidColorBrush x:Key="SurfaceHover" Color="{StaticResource SurfaceHoverColor}" />
+    
+    <SolidColorBrush x:Key="PrimaryAccent" Color="{StaticResource PrimaryAccentColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentHover" Color="{StaticResource PrimaryAccentHoverColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentMuted" Color="{StaticResource PrimaryAccentMutedColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentGlow" Color="{StaticResource PrimaryAccentGlowColor}" />
+    
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+    
+    <SolidColorBrush x:Key="Text" Color="{StaticResource TextColor}" />
+    <SolidColorBrush x:Key="MutedText" Color="{StaticResource MutedTextColor}" />
+    <SolidColorBrush x:Key="DimText" Color="{StaticResource DimTextColor}" />
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="InputBackground" Color="{StaticResource SurfaceBaseColor}" />
+
+    <!-- ═══ Theme Decoration (Coffee Beans) ═══ -->
+    <DrawingBrush x:Key="ThemeTopBarDecoration" Stretch="Uniform" TileMode="Tile" Viewport="0,0,120,120" ViewportUnits="Absolute" Opacity="0.15">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing>
+                <GeometryDrawing.Pen>
+                    <Pen Brush="{DynamicResource PrimaryAccent}" Thickness="2.5" StartLineCap="Round" EndLineCap="Round" />
+                </GeometryDrawing.Pen>
+                <GeometryDrawing.Geometry>
+                    <!-- Coffee Bean Path -->
+                    <PathGeometry Figures="M40,50 A20,30 45 0,0 80,90 A20,30 45 0,0 40,50 Z M45,65 Q60,70 75,75 M70,20 A15,20 -45 0,0 30,30 A15,20 -45 0,0 70,20 Z M40,25 Q45,35 55,35" />
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+</ResourceDictionary>

@@ -45,6 +45,13 @@ public class SteamApiService
                 ReleaseDate = data["release_date"]?["date"]?.Value<string>() ?? "",
             };
 
+            var priceOverview = data["price_overview"];
+            if (priceOverview != null && priceOverview.Type == JTokenType.Object && !game.IsFree)
+            {
+                var initial = priceOverview["initial"]?.Value<int>() ?? 0;
+                game.Price = (decimal)initial / 100m;
+            }
+
             var devs = data["developers"] as JArray;
             if (devs != null)
                 game.Developers = devs.Select(d => d.Value<string>() ?? "").ToList();
@@ -301,10 +308,11 @@ public class SteamApiService
                 list.Add(new DepotInfo
                 {
                     DepotId = depotId,
+                    Name = depotData["name"]?.Value<string>() ?? "",
                     ManifestId = manifestId,
                     DecryptionKey = decryptionKey,
-                    SizeBytes = maxSize,
-                    DlcAppId = dlcAppId
+                    DlcAppId = dlcAppId,
+                    SizeBytes = maxSize
                 });
             }
 

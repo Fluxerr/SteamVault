@@ -17,7 +17,7 @@ public class DiscoverViewModel : ViewModelBase
     private readonly DownloadService _downloadService;
     private readonly GameSearchService _searchService;
     private CancellationTokenSource? _searchCts;
-    private System.Timers.Timer? _searchDebounce;
+    private CancellationTokenSource? _debounceCts;
 
     // Known hardware/non-game App IDs that Steam's API misclassifies as type 0
     private static readonly HashSet<string> HardwareAppIds = new(StringComparer.OrdinalIgnoreCase)
@@ -42,12 +42,22 @@ public class DiscoverViewModel : ViewModelBase
         DownloadDetailGameCommand = new RelayCommand(async _ => await DownloadSelectedGameAsync(), _ => ShowGameDetail && !IsDownloading);
         InstallDetailGameCommand = new RelayCommand(_ => InstallSelectedGame(), _ => ShowGameDetail && IsDownloadComplete);
         BackToDiscoverCommand = new RelayCommand(_ => BackToBrowse());
+
+        NextPageCommand = new RelayCommand(_ => CurrentPage++, _ => CurrentPage < TotalPages);
+        PrevPageCommand = new RelayCommand(_ => CurrentPage--, _ => CurrentPage > 1);
+        SetViewModeCommand = new RelayCommand(param => { if (param is string v) ViewMode = v; });
+        SetCategoryCommand = new RelayCommand(param => 
+        {
+            if (param is string cat)
+            {
+                SelectedCategory = cat;
+                CurrentPage = 1;
+            }
+        });
     }
 
-    public ObservableCollection<SearchResult> TrendingGames { get; } = new();
-    public ObservableCollection<SearchResult> TopSellers { get; } = new();
-    public ObservableCollection<SearchResult> NewReleases { get; } = new();
-    public ObservableCollection<SearchResult> FreeGames { get; } = new();
+    public ObservableCollection<SearchResult> AllGames { get; } = new();
+    public ObservableCollection<SearchResult> FilteredGames { get; } = new();
     public ObservableCollection<SearchResult> SearchResults { get; } = new();
 
     private string _searchQuery = "";
@@ -56,6 +66,41 @@ public class DiscoverViewModel : ViewModelBase
         get => _searchQuery;
         set { SetProperty(ref _searchQuery, value); TriggerSearch(value); }
     }
+
+    private string _viewMode = "Grid";
+    public string ViewMode
+    {
+        get => _viewMode;
+        set => SetProperty(ref _viewMode, value);
+    }
+
+    private string _selectedCategory = "Trending";
+    public string SelectedCategory
+    {
+        get => _selectedCategory;
+        set { SetProperty(ref _selectedCategory, value); ApplyFiltersAndPagination(); }
+    }
+
+    private int _currentPage = 1;
+    public int CurrentPage
+    {
+        get => _currentPage;
+        set { SetProperty(ref _currentPage, value); ApplyFiltersAndPagination(); }
+    }
+
+    private int _totalPages = 1;
+    public int TotalPages
+    {
+        get => _totalPages;
+        set => SetProperty(ref _totalPages, value);
+    }
+    
+    private const int ItemsPerPage = 12;
+
+    public ICommand NextPageCommand { get; }
+    public ICommand PrevPageCommand { get; }
+    public ICommand SetCategoryCommand { get; }
+    public ICommand SetViewModeCommand { get; }
 
     private bool _showSearchGrid;
     public bool ShowSearchGrid
@@ -136,30 +181,36 @@ public class DiscoverViewModel : ViewModelBase
             var json = Newtonsoft.Json.Linq.JObject.Parse(
                 await http.GetStringAsync("https://store.steampowered.com/api/featuredcategories?l=english&cc=US"));
 
-            // Parse all sections: filter to games-only, take exactly multiples of 3 for clean grid
+            // Parse all sections: filter to games-only, get more items
             var trendingItems = ParseCategoryItems(json, "specials", gamesOnly: true)
                 .Concat(ParseCategoryItems(json, "coming_soon", gamesOnly: true))
                 .DistinctBy(r => r.AppId)
-                .Take(9).ToList();
+                .Take(24).ToList();
+            trendingItems.ForEach(x => x.Category = "Trending");
 
             var topSellerItems = ParseCategoryItems(json, "top_sellers", gamesOnly: true)
                 .DistinctBy(r => r.AppId)
-                .Take(9).ToList();
+                .Take(24).ToList();
+            topSellerItems.ForEach(x => x.Category = "Top Sellers");
 
             var newReleaseItems = ParseCategoryItems(json, "new_releases", gamesOnly: true)
                 .DistinctBy(r => r.AppId)
-                .Take(9).ToList();
+                .Take(24).ToList();
+            newReleaseItems.ForEach(x => x.Category = "New Releases");
 
             // Popular: use specials again but offset
             var freeItems = ParseCategoryItems(json, "specials", gamesOnly: true)
-                .Skip(9).Take(9).ToList();
+                .Skip(24).Take(24).ToList();
+            freeItems.ForEach(x => x.Category = "Specials");
 
             Application.Current.Dispatcher.Invoke(() =>
             {
-                Populate(TrendingGames, trendingItems);
-                Populate(TopSellers, topSellerItems);
-                Populate(NewReleases, newReleaseItems);
-                Populate(FreeGames, freeItems);
+                AllGames.Clear();
+                foreach (var item in trendingItems.Concat(topSellerItems).Concat(newReleaseItems).Concat(freeItems))
+                {
+                    AllGames.Add(item);
+                }
+                ApplyFiltersAndPagination();
             });
 
             StatusMessage = "Browse complete! Click any game card to see details and download.";
@@ -174,10 +225,23 @@ public class DiscoverViewModel : ViewModelBase
         }
     }
 
-    private static void Populate(ObservableCollection<SearchResult> target, List<SearchResult> items)
+    private void ApplyFiltersAndPagination()
     {
-        target.Clear();
-        foreach (var item in items) target.Add(item);
+        var filtered = AllGames.Where(x => x.Category == SelectedCategory).ToList();
+        
+        TotalPages = Math.Max(1, (int)Math.Ceiling(filtered.Count / (double)ItemsPerPage));
+        if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+        if (CurrentPage < 1) CurrentPage = 1;
+
+        var paginated = filtered.Skip((CurrentPage - 1) * ItemsPerPage).Take(ItemsPerPage).ToList();
+        
+        FilteredGames.Clear();
+        foreach (var item in paginated)
+        {
+            FilteredGames.Add(item);
+        }
+        
+        CommandManager.InvalidateRequerySuggested();
     }
 
     private async Task SelectGameAsync(SearchResult? result)
@@ -229,7 +293,12 @@ public class DiscoverViewModel : ViewModelBase
     private async Task DownloadSelectedGameAsync()
     {
         if (string.IsNullOrWhiteSpace(DetailAppId)) return;
-        bool includeDlcs = MessageBox.Show("Do you want to include all available DLCs?", "Include DLCs?", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+        var dialog = new SteamVault.Views.ModernDialogWindow(
+            "Do you want to include all available DLCs?", 
+            "Include DLCs?");
+        var dlcChoice = dialog.ShowDialog();
+        
+        bool includeDlcs = dlcChoice == true;
 
         IsDownloading = true; IsDownloadComplete = false;
         DetailStatusMessage = "Fetching game details from Steam..."; DetailProgress = 0;
@@ -260,8 +329,7 @@ public class DiscoverViewModel : ViewModelBase
 
     private void TriggerSearch(string query)
     {
-        _searchDebounce?.Stop();
-        _searchDebounce?.Dispose();
+        _debounceCts?.Cancel();
 
         if (string.IsNullOrWhiteSpace(query) || query.Length < 1)
         {
@@ -270,12 +338,18 @@ public class DiscoverViewModel : ViewModelBase
             return;
         }
 
-        _searchDebounce = new System.Timers.Timer(400) { AutoReset = false };
-        _searchDebounce.Elapsed += async (_, _) =>
+        var cts = new CancellationTokenSource();
+        _debounceCts = cts;
+
+        _ = Task.Run(async () =>
         {
-            await Application.Current.Dispatcher.InvokeAsync(async () => await PerformSearchAsync(query));
-        };
-        _searchDebounce.Start();
+            try
+            {
+                await Task.Delay(400, cts.Token);
+                await Application.Current.Dispatcher.InvokeAsync(async () => await PerformSearchAsync(query));
+            }
+            catch (OperationCanceledException) { }
+        });
     }
 
     private async Task PerformSearchAsync(string query)

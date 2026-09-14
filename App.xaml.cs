@@ -16,10 +16,39 @@ public partial class App : Application
     private SettingsService? _settingsService;
     private AutoUpdateService? _autoUpdateService;
     private MainWindow? _mainWindow;
+    private WhatsNewViewModel? _pendingWhatsNewVM;
     private bool _isExiting;
 
-    private void Application_Startup(object sender, StartupEventArgs e)
+    public static string? PendingFixZipPath { get; private set; }
+    public static string? PendingFixGameDir { get; private set; }
+    public static string? PendingFixAppId { get; private set; }
+    public static string? PendingFixName { get; private set; }
+    
+    public static void ReleaseSingleInstanceMutex()
     {
+        if (_instanceMutex != null)
+        {
+            try { _instanceMutex.ReleaseMutex(); } catch { }
+            try { _instanceMutex.Dispose(); } catch { }
+            _instanceMutex = null;
+        }
+    }
+
+    private async void Application_Startup(object sender, StartupEventArgs e)
+    {
+        Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        if (e.Args.Length >= 4 && e.Args[0] == "--extract-fix")
+        {
+            PendingFixZipPath = e.Args[1];
+            PendingFixGameDir = e.Args[2];
+            PendingFixAppId = e.Args[3];
+            if (e.Args.Length >= 5)
+            {
+                PendingFixName = e.Args[4];
+            }
+        }
+
         // 1. Single Instance mutext check
         _instanceMutex = new System.Threading.Mutex(true, "SteamVault_SingleInstance_Mutex", out bool createdNew);
         if (!createdNew)
@@ -64,11 +93,61 @@ public partial class App : Application
         // Auto-detect Steam paths if not configured
         _settingsService.Settings.AutoDetectPaths();
 
-        // Enforce Windows startup registry state
-        AutoUpdateService.SetStartupEnabled(_settingsService.Settings.AutoUpdateEnabled);
+        // Enforce Windows startup registry state (Auto-update disabled)
+        _settingsService.Settings.AutoUpdateEnabled = false;
+        AutoUpdateService.SetStartupEnabled(false);
 
         // Apply saved theme on startup so the Installation screen gets the correct brushes
         ThemeManager.ApplySavedTheme(_settingsService.Settings.Theme);
+        if (!string.IsNullOrWhiteSpace(_settingsService.Settings.CustomAccentColor))
+        {
+            ThemeManager.ApplyCustomAccent(_settingsService.Settings.CustomAccentColor);
+        }
+
+        // Check for updates
+        var updaterService = new AppUpdaterService();
+        var release = await updaterService.CheckForUpdatesAsync();
+        
+        if (release != null)
+        {
+            var updateVM = new UpdateViewModel { VersionInfo = $"Version {release.TagName} Available" };
+            var updateWindow = new SteamVault.Views.UpdateWindow { DataContext = updateVM };
+            updateWindow.Show();
+            
+            var zipPath = await updaterService.DownloadUpdateAsync(release, updateVM.UpdateProgress);
+            
+            if (!string.IsNullOrEmpty(zipPath))
+            {
+                updateVM.StatusText = "Download complete. Preparing update package...";
+                updateVM.ProgressValue = 100;
+                updateVM.IsIndeterminate = false;
+                await Task.Delay(400);
+
+                updateVM.StatusText = "Extracting files and applying update...";
+                await Task.Delay(500);
+
+                updateVM.StatusText = "Opening SteamVault...";
+                await Task.Delay(600);
+
+                UpdateExecutor.ApplyUpdateAndRestart(zipPath);
+                return;
+            }
+
+            else
+            {
+                updateWindow.Close();
+            }
+        }
+
+
+        // Check if WhatsNew should be shown
+        var currentVersionObj = AppUpdaterService.GetCurrentVersion();
+        var currentVersion = $"{currentVersionObj.Major}.{currentVersionObj.Minor}.{currentVersionObj.Build}";
+        if (_settingsService.Settings.ShownWhatsNewVersion != currentVersion)
+        {
+            _pendingWhatsNewVM = new WhatsNewViewModel();
+            _pendingWhatsNewVM.LoadReleaseNotes(currentVersion, release?.Body);
+        }
 
         // Check if OpenSteamTool installation is needed (first run)
         if (!_settingsService.Settings.IsInstalled)
@@ -124,13 +203,17 @@ public partial class App : Application
         var depotKeyService = new DepotKeyService();
         var steamApi = new SteamApiService();
         var luaGenerator = new LuaGeneratorService();
-        var manifestDownloader = new ManifestDownloadService(_settingsService!);
         var luaParser = new LuaParserService();
+        var authService = new AuthService();
+        Task.Run(async () => await authService.InitializeAsync());
+        
+        var luaToolsApi = new LuaToolsApiClient(authService);
         var searchService = new GameSearchService();
-        var downloadService = new DownloadService(steamApi, depotKeyService, luaGenerator, manifestDownloader, _settingsService!);
+        var downloadService = new DownloadService(steamApi, depotKeyService, luaGenerator, _settingsService!);
         var exportService = new ExportService(_settingsService!);
         var onlineFixService = new OnlineFixService(_settingsService!);
         var gameMgmtService = new GameManagementService(_settingsService!, onlineFixService);
+        var importService = new ImportService(_settingsService!, luaParser, steamApi);
 
         _autoUpdateService = new AutoUpdateService(
             _settingsService!,
@@ -148,22 +231,28 @@ public partial class App : Application
             searchService,
             exportService,
             onlineFixService,
-            gameMgmtService);
+            gameMgmtService,
+            luaToolsApi,
+            authService,
+            importService);
+
+        object initialViewModel = mainVM;
 
         // Initialize System Tray Icon (only once)
         if (_notifyIcon == null)
+
             CreateTrayIcon();
 
         // Reuse the existing window if already created (from installation wizard)
         if (_mainWindow != null)
         {
-            _mainWindow.DataContext = mainVM;
+            _mainWindow.DataContext = initialViewModel;
         }
         else
         {
             _mainWindow = new MainWindow
             {
-                DataContext = mainVM
+                DataContext = initialViewModel
             };
             _mainWindow.Closing += MainWindow_Closing;
 
@@ -174,7 +263,14 @@ public partial class App : Application
             else
             {
                 _mainWindow.Show();
+                _mainWindow.Activate();
             }
+        }
+
+        // Show What's New modal centered on top of main window if pending
+        if (!startSilent && _mainWindow != null)
+        {
+            ShowPendingWhatsNew(_mainWindow);
         }
 
         // Start background updater timer
@@ -334,25 +430,85 @@ public partial class App : Application
                 _mainWindow?.Hide();
                 _notifyIcon?.ShowBalloonTip(2500, "SteamVault minimized", "Running in background in your system tray.", ToolTipIcon.Info);
             }
+            else
+            {
+                e.Cancel = true;
+                ExitApplication();
+            }
+        }
+    }
+
+    private void ShowPendingWhatsNew(MainWindow mainWindow)
+    {
+        if (_pendingWhatsNewVM == null) return;
+        var vmToShow = _pendingWhatsNewVM;
+        _pendingWhatsNewVM = null;
+
+        var showAction = new System.Action(() =>
+        {
+            try
+            {
+                var whatsNewWindow = new SteamVault.Views.WhatsNewWindow
+                {
+                    DataContext = vmToShow,
+                    Owner = mainWindow,
+                    WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
+                };
+                whatsNewWindow.ShowDialog();
+
+                // Save ShownWhatsNewVersion ONLY after user closes the window!
+                var version = AppUpdaterService.GetCurrentVersion();
+                var versionStr = $"{version.Major}.{version.Minor}.{version.Build}";
+                if (_settingsService != null)
+                {
+                    _settingsService.Settings.ShownWhatsNewVersion = versionStr;
+                    _settingsService.Settings.LastRunVersion = versionStr;
+                    _settingsService.Save();
+                }
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to show WhatsNew window: {ex.Message}");
+            }
+        });
+
+        if (mainWindow.IsLoaded)
+        {
+            mainWindow.Dispatcher.BeginInvoke(showAction, System.Windows.Threading.DispatcherPriority.Background);
+        }
+        else
+        {
+            RoutedEventHandler loadedHandler = null!;
+            loadedHandler = (s, e) =>
+            {
+                mainWindow.Loaded -= loadedHandler;
+                mainWindow.Dispatcher.BeginInvoke(showAction, System.Windows.Threading.DispatcherPriority.Background);
+            };
+            mainWindow.Loaded += loadedHandler;
         }
     }
 
     private void ExitApplication()
     {
         _isExiting = true;
-        if (_notifyIcon != null)
-        {
-            _notifyIcon.Visible = false;
-            _notifyIcon.Dispose();
-        }
+        _mainWindow?.Hide(); // Hide instantly so it feels responsive
         
-        DiscordService.Instance.Dispose();
-        _autoUpdateService?.Cancel();
-        
-        Current.Dispatcher.Invoke(() =>
+        Task.Run(() =>
         {
-            _mainWindow?.Close();
-            Shutdown();
+            if (_notifyIcon != null)
+            {
+                _notifyIcon.Visible = false;
+                _notifyIcon.Dispose();
+            }
+            
+            DiscordService.Instance.Dispose();
+            _autoUpdateService?.Cancel();
+            
+            Current.Dispatcher.Invoke(() =>
+            {
+                _mainWindow?.Close();
+                Shutdown();
+            });
         });
     }
 }

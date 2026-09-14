@@ -388,14 +388,15 @@ public class OpenSteamToolInstaller
             }
         }
 
-        // Create config\lua and config\depotcache directories
+        // Create config\lua, config\depotcache, and root depotcache directories
         var configDir = Path.Combine(steamDirectory, "config");
         var luaPath = Path.Combine(configDir, "lua");
-        var depotcachePath = Path.Combine(configDir, "depotcache");
+        var primaryDepotcache = Path.Combine(configDir, "depotcache");
+        var secondaryDepotcache = Path.Combine(steamDirectory, "depotcache");
 
         try
         {
-            var dirsToCreate = new[] { luaPath, depotcachePath };
+            var dirsToCreate = new[] { luaPath, primaryDepotcache, secondaryDepotcache };
             foreach (var dir in dirsToCreate)
             {
                 if (!Directory.Exists(dir))

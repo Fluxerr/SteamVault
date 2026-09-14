@@ -9,45 +9,165 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using Application = System.Windows.Application;
+using System.Linq;
 
 namespace SteamVault.ViewModels;
 
-/// <summary>
-/// Online tab — shows games with online-fix.me multiplayer fix integration.
-/// Parses appmanifest files to find game directories.
-/// User downloads RAR from online-fix.me via browser into the app folder;
-/// the app auto-detects the RAR and extracts it into the game folder.
-/// </summary>
 public class OnlineViewModel : ViewModelBase
 {
     private readonly SettingsService _settings;
     private readonly SteamApiService _steamApi;
     private readonly LuaParserService _luaParser;
     private readonly OnlineFixService _onlineFix;
+    private readonly LuaToolsApiClient _apiClient;
+    private readonly AuthService _authService;
+    
     private readonly List<OnlineGameEntry> _allGames = new();
+    private List<DenuvoFix> _gameFixes = new();
 
     public OnlineViewModel(
         SettingsService settings,
         SteamApiService steamApi,
         LuaParserService luaParser,
-        OnlineFixService onlineFix)
+        OnlineFixService onlineFix,
+        LuaToolsApiClient apiClient,
+        AuthService authService)
     {
         _settings = settings;
         _steamApi = steamApi;
         _luaParser = luaParser;
         _onlineFix = onlineFix;
+        _apiClient = apiClient;
+        _authService = authService;
+
+        _authService.AuthStateChanged += () =>
+        {
+            OnPropertyChanged(nameof(IsSignedIn));
+            OnPropertyChanged(nameof(UserDisplayName));
+        };
 
         RefreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => !IsScanning && !IsBusy);
         SelectGameCommand = new RelayCommand(param => SelectGame(param as OnlineGameEntry));
         BackToGridCommand = new RelayCommand(_ => SelectGame(null));
         OpenGameDirCommand = new RelayCommand(param => OpenGameDir(param as OnlineGameEntry));
-        OpenOnlineFixCommand = new RelayCommand(param => OpenOnlineFixBrowser(param as OnlineGameEntry));
-        ApplyFixCommand = new RelayCommand(param => StartFixProcess(param as OnlineGameEntry),
-            param => param is OnlineGameEntry e && e.IsInstalled && !e.IsApplying && !IsBusy && !NeedsAdminRights);
         RestartAsAdminCommand = new RelayCommand(_ => RestartAsAdmin());
+        
+        FilterCommand = new RelayCommand(param => SetFilter(param as string));
+        SetViewModeCommand = new RelayCommand(param => { if (param is string v) ViewMode = v; });
+        
+        DownloadBypassCommand = new RelayCommand(param => DownloadFix(param as DenuvoFix, "manifest"), _ => !IsBusy);
+        DownloadOnlineFixCommand = new RelayCommand(param => DownloadFix(param as DenuvoFix, "fix"), _ => !IsBusy);
+
+        OpenSignInModalCommand = new RelayCommand(async _ => await BrowserSignInAsync());
+        CloseSignInModalCommand = new RelayCommand(_ => IsSignInModalVisible = false);
+        RedeemBotCodeCommand = new RelayCommand(async _ => await RedeemBotCodeAsync(), _ => !IsRedeemingCode);
+        BrowserSignInCommand = new RelayCommand(async _ => await BrowserSignInAsync());
+        SignOutCommand = new RelayCommand(_ => _authService.SignOut());
     }
 
+    private string _viewMode = "Grid";
+    public string ViewMode
+    {
+        get => _viewMode;
+        set => SetProperty(ref _viewMode, value);
+    }
+    public ICommand SetViewModeCommand { get; }
+
+    public bool IsSignedIn => _authService.IsSignedIn;
+    public string UserDisplayName => _authService.DisplayName ?? _authService.Email ?? "Signed In";
+
+    private bool _isSignInModalVisible;
+    public bool IsSignInModalVisible
+    {
+        get => _isSignInModalVisible;
+        set => SetProperty(ref _isSignInModalVisible, value);
+    }
+
+    private string _botCodeInput = "";
+    public string BotCodeInput
+    {
+        get => _botCodeInput;
+        set => SetProperty(ref _botCodeInput, value);
+    }
+
+    private bool _isRedeemingCode;
+    public bool IsRedeemingCode
+    {
+        get => _isRedeemingCode;
+        set => SetProperty(ref _isRedeemingCode, value);
+    }
+
+    private string? _codeErrorMessage;
+    public string? CodeErrorMessage
+    {
+        get => _codeErrorMessage;
+        set => SetProperty(ref _codeErrorMessage, value);
+    }
+
+    public ICommand OpenSignInModalCommand { get; }
+    public ICommand CloseSignInModalCommand { get; }
+    public ICommand RedeemBotCodeCommand { get; }
+    public ICommand BrowserSignInCommand { get; }
+    public ICommand SignOutCommand { get; }
+
     public ObservableCollection<OnlineGameEntry> Games { get; } = new();
+    
+    private string _searchQuery = "";
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (SetProperty(ref _searchQuery, value))
+            {
+                ApplyFilters();
+            }
+        }
+    }
+    
+    private bool _isAdminRequired;
+    public bool IsAdminRequired
+    {
+        get => _isAdminRequired;
+        set => SetProperty(ref _isAdminRequired, value);
+    }
+    
+    private string? _pendingZipPath;
+    private string? _pendingGameDir;
+    private string? _pendingAppId;
+    private string? _pendingFixName;
+
+    private string _currentFilter = "All";
+    public string CurrentFilter
+    {
+        get => _currentFilter;
+        set
+        {
+            if (SetProperty(ref _currentFilter, value))
+                ApplyFilters();
+        }
+    }
+    
+    private void SetFilter(string? filter)
+    {
+        if (filter != null) CurrentFilter = filter;
+    }
+
+    private void ApplyFilters()
+    {
+        Games.Clear();
+        var query = _searchQuery.ToLowerInvariant();
+        
+        var filtered = _allGames.Where(g => 
+            (string.IsNullOrWhiteSpace(query) || g.Name.ToLowerInvariant().Contains(query)) &&
+            (CurrentFilter == "All" || 
+             (CurrentFilter == "Bypasses" && g.HasBypass) || 
+             (CurrentFilter == "Online Fixes" && g.HasOnlineFix))
+        ).OrderBy(g => g.IsInstalled ? 0 : 1).ThenBy(g => g.Name);
+
+        foreach (var g in filtered)
+            Games.Add(g);
+    }
 
     private bool _isScanning;
     public bool IsScanning
@@ -78,7 +198,6 @@ public class OnlineViewModel : ViewModelBase
         set => SetProperty(ref _statusMessage, value);
     }
 
-    // --- Detail View Properties ---
     private bool _showGameDetail;
     public bool ShowGameDetail
     {
@@ -97,6 +216,8 @@ public class OnlineViewModel : ViewModelBase
             CommandManager.InvalidateRequerySuggested();
         }
     }
+    
+    public ObservableCollection<DenuvoFix> SelectedGameFixes { get; } = new();
 
     private string _detailStatusMessage = "";
     public string DetailStatusMessage
@@ -138,14 +259,15 @@ public class OnlineViewModel : ViewModelBase
     public ICommand SelectGameCommand { get; }
     public ICommand BackToGridCommand { get; }
     public ICommand OpenGameDirCommand { get; }
-    public ICommand OpenOnlineFixCommand { get; }
-    public ICommand ApplyFixCommand { get; }
     public ICommand RestartAsAdminCommand { get; }
+    public ICommand FilterCommand { get; }
+    public ICommand DownloadBypassCommand { get; }
+    public ICommand DownloadOnlineFixCommand { get; }
 
     public async Task RefreshAsync()
     {
         IsScanning = true;
-        StatusMessage = "Scanning Lua directory...";
+        StatusMessage = "Loading fixes from API...";
         ShowGameDetail = false;
         _allGames.Clear();
         Games.Clear();
@@ -154,88 +276,83 @@ public class OnlineViewModel : ViewModelBase
 
         try
         {
+            var apiListings = await _apiClient.GetDenuvoListingsAsync();
+            if (apiListings == null || apiListings.Games.Count == 0)
+            {
+                StatusMessage = "Failed to load fixes from API or no fixes available.";
+                IsScanning = false;
+                return;
+            }
+
+            StatusMessage = "Scanning installed games...";
+            
+            var allSteamGames = new List<OnlineGameEntry>();
+            
             var luaPath = _settings.Settings.LuaOutputPath;
-            if (string.IsNullOrWhiteSpace(luaPath) || !Directory.Exists(luaPath))
+            if (!string.IsNullOrWhiteSpace(luaPath) && Directory.Exists(luaPath))
             {
-                StatusMessage = "Lua folder not found. Download some games first!";
-                HasNoGames = true;
-                IsScanning = false;
-                return;
-            }
-
-            var luaEntries = _luaParser.ScanLuaFolder(luaPath);
-            if (luaEntries.Count == 0)
-            {
-                StatusMessage = "No games found. Download some Lua configs first!";
-                HasNoGames = true;
-                IsScanning = false;
-                return;
-            }
-
-            foreach (var entry in luaEntries)
-            {
-                var gameEntry = new OnlineGameEntry
+                var luaEntries = _luaParser.ScanLuaFolder(luaPath);
+                foreach (var entry in luaEntries)
                 {
-                    AppId = entry.AppId,
-                    Name = entry.Name,
-                    Status = "Checking..."
-                };
-                _allGames.Add(gameEntry);
+                    allSteamGames.Add(new OnlineGameEntry { AppId = entry.AppId, Name = entry.Name });
+                }
             }
 
-            RefreshGamesList();
-            StatusMessage = $"Found {luaEntries.Count} game(s) — checking categories & install status...";
+            if (apiListings?.Games != null)
+            {
+                foreach (var apiGame in apiListings.Games)
+                {
+                    if (!allSteamGames.Any(g => g.AppId == apiGame.AppId))
+                    {
+                        allSteamGames.Add(new OnlineGameEntry { AppId = apiGame.AppId, Name = apiGame.Name });
+                    }
+                }
+            }
 
             var semaphore = new SemaphoreSlim(5);
             var completed = 0;
             var installedCount = 0;
-            var multiplayerCount = 0;
             var lockObj = new object();
 
-            var tasks = _allGames.Select(async entry =>
+            var tasks = allSteamGames.Select(async entry =>
             {
                 await semaphore.WaitAsync();
                 try
                 {
-                    var gameInfo = await _steamApi.GetAppDetailsAsync(entry.AppId);
-                    if (gameInfo != null)
+                    entry.IsInstalled = _onlineFix.IsGameInstalled(entry.AppId);
+                    if (!entry.IsInstalled) return; // We only care about installed games per requirements
+
+                    var apiGame = apiListings?.Games.FirstOrDefault(g => g.AppId == entry.AppId);
+                    if (apiGame != null && apiGame.FixCount > 0)
                     {
-                        var hasMultiplayer = gameInfo.HasMultiplayerCategories;
-
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        bool hasOnlineTag = apiGame.Tags.Any(t => t.Name.Contains("Online Fix", StringComparison.OrdinalIgnoreCase) || t.Slug.Contains("online-fix", StringComparison.OrdinalIgnoreCase) || t.Name.Contains("Steamworks", StringComparison.OrdinalIgnoreCase));
+                        bool hasBypassTag = apiGame.Tags.Any(t => t.Name.Contains("Bypass", StringComparison.OrdinalIgnoreCase) || t.Slug.Contains("bypass", StringComparison.OrdinalIgnoreCase) || t.Slug.Contains("denuvo", StringComparison.OrdinalIgnoreCase));
+                        
+                        if (!hasOnlineTag && !hasBypassTag) 
                         {
-                            entry.Name = gameInfo.Name;
-                            entry.HeaderImageUrl = gameInfo.HeaderImageUrl;
-                            entry.IsMultiplayer = hasMultiplayer;
-                        });
+                            hasBypassTag = true; // Default if tags are missing but fixes exist
+                        }
 
-                        if (!hasMultiplayer)
+                        entry.HasOnlineFix = hasOnlineTag;
+                        entry.HasBypass = hasBypassTag;
+                        entry.HeaderImageUrl = apiGame.HeaderImage ?? "";
+                        entry.Name = apiGame.Name;
+
+                        entry.InstallPath = _onlineFix.GetGameInstallPath(entry.AppId);
+                        entry.FixApplied = _onlineFix.IsFixApplied(entry.AppId);
+                        entry.Status = entry.FixApplied ? "✅ Fix Applied" : "✅ Installed";
+
+                        lock (lockObj)
                         {
-                            lock (lockObj) { completed++; }
-                            return;
+                            installedCount++;
+                            _allGames.Add(entry);
                         }
                     }
-                    else
-                    {
-                        lock (lockObj) { completed++; }
-                        return;
-                    }
-
-                    entry.IsInstalled = _onlineFix.IsGameInstalled(entry.AppId);
-                    entry.InstallPath = _onlineFix.GetGameInstallPath(entry.AppId);
-                    entry.FixApplied = _onlineFix.IsFixApplied(entry.AppId);
-
-                    if (entry.IsInstalled)
-                        entry.Status = entry.FixApplied ? "✅ Fix Applied" : "✅ Installed";
-                    else
-                        entry.Status = "⚠️ Not Installed";
-
+                    
                     lock (lockObj)
                     {
-                        if (entry.IsInstalled) installedCount++;
-                        multiplayerCount++;
                         completed++;
-                        StatusMessage = $"{luaEntries.Count} games · {installedCount} installed · {completed}/{luaEntries.Count} checked";
+                        StatusMessage = $"Scanning... {completed}/{allSteamGames.Count} checked";
                     }
                 }
                 finally
@@ -246,13 +363,11 @@ public class OnlineViewModel : ViewModelBase
 
             await Task.WhenAll(tasks);
 
-            _allGames.RemoveAll(g => !g.IsMultiplayer);
-
-            RefreshGamesList();
+            ApplyFilters();
             HasNoGames = _allGames.Count == 0;
             StatusMessage = HasNoGames
-                ? "No online-capable games found in your library."
-                : $"{_allGames.Count} online-capable game(s) · {installedCount} installed · {_allGames.Count - installedCount} not installed";
+                ? "No supported installed games found."
+                : $"Found {_allGames.Count} installed game(s) with fixes.";
         }
         catch (Exception ex)
         {
@@ -264,16 +379,8 @@ public class OnlineViewModel : ViewModelBase
         }
     }
 
-    private void RefreshGamesList()
+    private async void SelectGame(OnlineGameEntry? entry)
     {
-        Games.Clear();
-        foreach (var g in _allGames.OrderBy(g => g.IsInstalled ? 0 : 1).ThenBy(g => g.Name))
-            Games.Add(g);
-    }
-
-    private void SelectGame(OnlineGameEntry? entry)
-    {
-        _onlineFix.StopWatching();
         NeedsAdminRights = false;
 
         if (entry == null)
@@ -285,16 +392,140 @@ public class OnlineViewModel : ViewModelBase
 
         SelectedGame = entry;
         ShowGameDetail = true;
+        DetailStatusMessage = "Loading fixes...";
+        SelectedGameFixes.Clear();
 
         if (entry.IsInstalled)
         {
             DetailStatusMessage = entry.FixApplied
                 ? "Fix has been applied. You can re-apply if needed."
-                : "Press 'Apply Fix' to start — then download the .rar from online-fix.me and save it to the app folder.";
+                : "Select a fix or bypass to download.";
+                
+            // Fetch fixes from API
+            try
+            {
+                var fixesData = await _apiClient.GetDenuvoFixesAsync(entry.AppId);
+                if (fixesData != null && fixesData.Fixes != null)
+                {
+                    foreach (var fix in fixesData.Fixes)
+                    {
+                        SelectedGameFixes.Add(fix);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // ignore if not found
+            }
         }
         else
         {
-            DetailStatusMessage = "Game is not installed. Install it via Steam first, then come back.";
+            DetailStatusMessage = "Game is not installed. Install it via Steam first.";
+        }
+    }
+    
+    private async void DownloadFix(DenuvoFix? fix, string slot)
+    {
+        if (fix == null || SelectedGame == null) return;
+        
+        IsBusy = true;
+        DetailStatusMessage = "Downloading...";
+        
+        try
+        {
+            var progress = new Progress<double?>(p => {
+                if (p.HasValue) DownloadProgress = p.Value * 100;
+            });
+            
+            var result = await _apiClient.DownloadDenuvoAsync(fix.Id, slot, $"{SelectedGame.AppId}_fix.zip", progress);
+            
+            DetailStatusMessage = $"Downloaded to: {result.FilePath}";
+            
+            // Extract it
+            var gameDir = _onlineFix.GetGameInstallPath(SelectedGame.AppId);
+            if (!string.IsNullOrWhiteSpace(gameDir))
+            {
+                DetailStatusMessage = "Extracting...";
+                var (extractResult, error) = _onlineFix.ExtractZipToGameDir(result.FilePath, gameDir, msg => DetailStatusMessage = msg);
+                if (extractResult == OnlineFixService.ExtractResult.Success)
+                {
+                    SelectedGame.FixApplied = true;
+                    SelectedGame.Status = "✅ Fix Applied";
+                    DetailStatusMessage = "✓ Fix applied successfully!";
+                    IsAdminRequired = false;
+                }
+                else if (extractResult == OnlineFixService.ExtractResult.PermissionDenied)
+                {
+                    DetailStatusMessage = error ?? "Permission denied.";
+                    _pendingZipPath = result.FilePath;
+                    _pendingGameDir = gameDir;
+                    _pendingAppId = SelectedGame.AppId;
+                    _pendingFixName = slot == "manifest" ? "Bypass" : "Online Fix";
+                    IsAdminRequired = true;
+                }
+                else
+                {
+                    DetailStatusMessage = error ?? "✗ Failed to extract fix.";
+                    IsAdminRequired = false;
+                }
+            }
+        }
+        catch (AuthException)
+        {
+            DetailStatusMessage = "Sign in required. Opening browser to login...";
+            await BrowserSignInAsync();
+        }
+        catch (Exception ex)
+        {
+            DetailStatusMessage = $"Download failed: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task RedeemBotCodeAsync()
+    {
+        var code = BotCodeInput.Trim();
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            CodeErrorMessage = "Please enter a 6-character code from Discord.";
+            return;
+        }
+
+        IsRedeemingCode = true;
+        CodeErrorMessage = null;
+        try
+        {
+            await _authService.SignInWithCodeAsync(code);
+            IsSignInModalVisible = false;
+            BotCodeInput = "";
+            DetailStatusMessage = "✓ Signed in with Discord successfully! Please click download again.";
+        }
+        catch (Exception ex)
+        {
+            CodeErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsRedeemingCode = false;
+        }
+    }
+
+    private async Task BrowserSignInAsync()
+    {
+        CodeErrorMessage = null;
+        DetailStatusMessage = "Opening browser for Discord login...";
+        try
+        {
+            await _authService.SignInAsync();
+            IsSignInModalVisible = false;
+            DetailStatusMessage = "✓ Signed in with Discord! Please click download again.";
+        }
+        catch (Exception ex)
+        {
+            CodeErrorMessage = $"Browser sign-in failed: {ex.Message}";
         }
     }
 
@@ -304,153 +535,96 @@ public class OnlineViewModel : ViewModelBase
         _onlineFix.OpenGameDirectory(entry.AppId);
     }
 
-    private void OpenOnlineFixBrowser(OnlineGameEntry? game)
-    {
-        if (game == null) return;
-
-        // If the game is installed, start the full fix workflow with the embedded browser
-        if (game.IsInstalled)
-        {
-            StartFixWithBrowser(game);
-        }
-        else
-        {
-            // Just open the browser for browsing
-            try
-            {
-                var window = new SteamVault.Views.OnlineFixBrowserWindow(game.Name);
-                window.Owner = Application.Current.MainWindow;
-                window.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                DetailStatusMessage = $"Browser failed: {ex.Message}";
-            }
-        }
-    }
-
-    /// <summary>
-    /// Opens the embedded browser to online-fix.me AND starts the fix extraction pipeline.
-    /// When the user downloads a .rar from the browser, it auto-routes to the app folder,
-    /// the file watcher detects it, and extraction happens automatically.
-    /// </summary>
-    private void StartFixWithBrowser(OnlineGameEntry entry)
-    {
-        if (IsBusy) return;
-
-        IsBusy = true;
-        entry.IsApplying = true;
-        DownloadProgress = 0;
-        NeedsAdminRights = false;
-        CommandManager.InvalidateRequerySuggested();
-
-        DetailStatusMessage = "Browser open — download the fix .rar and it will be applied automatically.";
-
-        // Start watching for RAR files (handles both browser-intercepted and manual drops)
-        _onlineFix.StartWatching(async rarPath =>
-        {
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                DetailStatusMessage = $"Found: {Path.GetFileName(rarPath)}\nExtracting...";
-            });
-
-            var gameDir = _onlineFix.GetGameInstallPath(entry.AppId);
-            if (string.IsNullOrWhiteSpace(gameDir))
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    DetailStatusMessage = $"✗ Game directory not found for {entry.Name}.";
-                    FinishFixProcess(entry, OnlineFixService.ExtractResult.Failed);
-                });
-                return;
-            }
-
-            var (result, error) = _onlineFix.ExtractFixToGameDir(rarPath, gameDir,
-                onStatus: msg => Application.Current?.Dispatcher.Invoke(() => DetailStatusMessage = msg));
-
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                if (result == OnlineFixService.ExtractResult.Success)
-                {
-                    entry.FixApplied = true;
-                    entry.Status = "✅ Fix Applied";
-                    DownloadProgress = 100;
-                    DetailStatusMessage = $"✓ Multiplayer fix applied to {entry.Name}!";
-                }
-                else if (result == OnlineFixService.ExtractResult.PermissionDenied)
-                {
-                    DetailStatusMessage = error ?? "Permission denied — the game folder requires administrator rights.";
-                    NeedsAdminRights = true;
-                }
-                else
-                {
-                    DetailStatusMessage = error ?? "✗ Failed to extract fix.";
-                }
-                FinishFixProcess(entry, result);
-            });
-        });
-
-        // Open the embedded browser
-        try
-        {
-            var window = new SteamVault.Views.OnlineFixBrowserWindow(entry.Name);
-            window.Owner = Application.Current.MainWindow;
-            window.ShowDialog();
-        }
-        catch (Exception ex)
-        {
-            DetailStatusMessage = $"Browser failed: {ex.Message}";
-        }
-
-        // If browser closed without a download, clean up
-        if (entry.IsApplying)
-        {
-            FinishFixProcess(entry, OnlineFixService.ExtractResult.Failed);
-            if (!entry.FixApplied)
-                DetailStatusMessage = "Browser closed. Download a fix .rar to apply it.";
-        }
-    }
-
-    /// <summary>
-    /// Legacy: Opens the embedded browser directly (used by the "Apply Fix" button).
-    /// Now redirects to the unified StartFixWithBrowser flow.
-    /// </summary>
-    private void StartFixProcess(OnlineGameEntry? entry)
-    {
-        if (entry == null || !entry.IsInstalled || IsBusy) return;
-        StartFixWithBrowser(entry);
-    }
-
-    private void FinishFixProcess(OnlineGameEntry entry, OnlineFixService.ExtractResult result)
-    {
-        _onlineFix.StopWatching();
-        entry.IsApplying = false;
-        IsBusy = false;
-        CommandManager.InvalidateRequerySuggested();
-    }
-
-    /// <summary>
-    /// Restarts the application with administrator privileges.
-    /// </summary>
     private void RestartAsAdmin()
     {
         try
         {
             var exePath = Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location;
+            string args = "";
+            if (!string.IsNullOrWhiteSpace(_pendingZipPath) && !string.IsNullOrWhiteSpace(_pendingGameDir) && !string.IsNullOrWhiteSpace(_pendingAppId))
+            {
+                args = $"--extract-fix \"{_pendingZipPath}\" \"{_pendingGameDir}\" \"{_pendingAppId}\" \"{_pendingFixName ?? "Fix"}\"";
+            }
+            
             var startInfo = new ProcessStartInfo(exePath)
             {
+                Arguments = args,
                 UseShellExecute = true,
-                Verb = "runas" // Triggers UAC prompt
+                Verb = "runas" 
             };
+            
+            SteamVault.App.ReleaseSingleInstanceMutex();
             Process.Start(startInfo);
 
-            // Close the current instance
             Application.Current.Shutdown();
         }
         catch (Exception ex)
         {
             DetailStatusMessage = $"✗ Failed to restart as admin: {ex.Message}";
         }
+    }
+
+    public async Task ProcessPendingExtractionAsync()
+    {
+        var zipPath = App.PendingFixZipPath;
+        var gameDir = App.PendingFixGameDir;
+        var appId = App.PendingFixAppId;
+        var fixName = App.PendingFixName ?? "Fix";
+
+        if (string.IsNullOrWhiteSpace(zipPath) || string.IsNullOrWhiteSpace(gameDir) || string.IsNullOrWhiteSpace(appId))
+            return;
+
+        IsBusy = true;
+        DetailStatusMessage = $"Applying {fixName} with admin permissions...";
+
+        // Wait a little bit for the UI to fully load and display
+        await Task.Delay(1500);
+
+        // Load the games list if it hasn't been loaded yet so we can select the right game
+        if (!Games.Any())
+        {
+            await RefreshAsync();
+        }
+        
+        var gameToSelect = Games.FirstOrDefault(g => g.AppId == appId);
+        if (gameToSelect != null)
+        {
+            SelectGame(gameToSelect);
+        }
+
+        await Task.Run(() =>
+        {
+            var (result, error) = _onlineFix.ExtractZipToGameDir(zipPath, gameDir, msg => 
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() => DetailStatusMessage = msg);
+            });
+
+            OnlineFixService.CleanupTempFile(zipPath);
+
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (result == OnlineFixService.ExtractResult.Success)
+                {
+                    DetailStatusMessage = $"✓ {fixName} applied successfully!";
+                    // Try to update the game in the list if it exists
+                    var game = Games.FirstOrDefault(g => g.AppId == appId);
+                    if (game != null)
+                    {
+                        game.FixApplied = true;
+                        game.Status = $"✅ {fixName} Applied";
+                        if (SelectedGame == game)
+                        {
+                            IsAdminRequired = false;
+                        }
+                    }
+                }
+                else
+                {
+                    DetailStatusMessage = error ?? $"✗ Failed to extract {fixName.ToLower()}.";
+                }
+                IsBusy = false;
+            });
+        });
     }
 }
 
@@ -483,6 +657,32 @@ public class OnlineGameEntry : INotifyPropertyChanged
     public string? InstallPath { get; set; }
     public bool FixApplied { get; set; }
     public bool IsMultiplayer { get; set; }
+    
+    // New properties for Fix/Bypass tags
+    private bool _hasOnlineFix;
+    public bool HasOnlineFix
+    {
+        get => _hasOnlineFix;
+        set { _hasOnlineFix = value; OnPropertyChanged(); OnPropertyChanged(nameof(TagText)); }
+    }
+    
+    private bool _hasBypass;
+    public bool HasBypass
+    {
+        get => _hasBypass;
+        set { _hasBypass = value; OnPropertyChanged(); OnPropertyChanged(nameof(TagText)); }
+    }
+    
+    public string TagText
+    {
+        get
+        {
+            if (HasOnlineFix && HasBypass) return "Fix & Bypass";
+            if (HasBypass) return "Bypass";
+            if (HasOnlineFix) return "Online Fix";
+            return "";
+        }
+    }
 
     private bool _isApplying;
     public bool IsApplying

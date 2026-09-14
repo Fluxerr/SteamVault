@@ -12,10 +12,11 @@ namespace SteamVault.ViewModels;
 public class DashboardViewModel : ViewModelBase
 {
     private readonly DownloadService _downloadService;
-    private readonly GameSearchService _searchService;
     private readonly SteamApiService _steamApi;
+    private readonly ImportService _importService;
+    private readonly GameSearchService _searchService;
     private CancellationTokenSource? _searchCts;
-    private System.Timers.Timer? _searchDebounce;
+    private CancellationTokenSource? _debounceCts;
 
     public DashboardViewModel(
         DownloadService downloadService,
@@ -24,7 +25,8 @@ public class DashboardViewModel : ViewModelBase
         LuaParserService luaParser,
         SettingsService settings,
         GameManagementService gameMgmt,
-        DepotKeyService depotKeyService)
+        DepotKeyService depotKeyService,
+        ImportService importService)
     {
         _downloadService = downloadService;
         _searchService = searchService;
@@ -33,6 +35,10 @@ public class DashboardViewModel : ViewModelBase
         _settings = settings;
         _gameMgmt = gameMgmt;
         _depotKeyService = depotKeyService;
+        _importService = importService;
+
+        LoadRecentActivity();
+        SearchHistoryList = new ObservableCollection<string>(_settings.Settings.SearchHistory);
 
         PlayFeaturedGameCommand = new RelayCommand(
             param => PlayGame(param as FeaturedGameEntry));
@@ -61,6 +67,11 @@ public class DashboardViewModel : ViewModelBase
 
         SelectSearchResultCommand = new RelayCommand(
             param => SelectSearchResult(param as SearchResult));
+
+        ImportFilesCommand = new RelayCommand(
+            async param => await SmartImportFilesAsync(param as string[]));
+
+        DismissMultiImportCommand = new RelayCommand(_ => DismissMultiImport());
     }
 
     /// <summary>
@@ -82,8 +93,10 @@ public class DashboardViewModel : ViewModelBase
         }
     }
 
-    // Search results
     public ObservableCollection<SearchResult> SearchResults { get; } = new();
+    
+    public ObservableCollection<DownloadHistoryEntry> RecentActivity { get; } = new();
+    public ObservableCollection<string> SearchHistoryList { get; } = new();
 
     private bool _showSearchResults;
     public bool ShowSearchResults
@@ -239,6 +252,41 @@ public class DashboardViewModel : ViewModelBase
         set => SetProperty(ref _hasFeaturedGames, value);
     }
 
+    // ── Multi-Import State ──
+    private bool _isMultiImporting;
+    public bool IsMultiImporting
+    {
+        get => _isMultiImporting;
+        set
+        {
+            SetProperty(ref _isMultiImporting, value);
+            OnPropertyChanged(nameof(HasGameInfo));
+        }
+    }
+
+    public ObservableCollection<ImportedGameInfo> ImportedGames { get; } = new();
+
+    private string _multiImportSummary = "";
+    public string MultiImportSummary
+    {
+        get => _multiImportSummary;
+        set => SetProperty(ref _multiImportSummary, value);
+    }
+
+    private bool _multiImportComplete;
+    public bool MultiImportComplete
+    {
+        get => _multiImportComplete;
+        set => SetProperty(ref _multiImportComplete, value);
+    }
+
+    private bool _isDragOver;
+    public bool IsDragOver
+    {
+        get => _isDragOver;
+        set => SetProperty(ref _isDragOver, value);
+    }
+
     public ICommand PlayFeaturedGameCommand { get; }
     public ICommand UpdateFeaturedGameCommand { get; }
         public ICommand ViewAllCommand { get; }
@@ -250,12 +298,286 @@ public class DashboardViewModel : ViewModelBase
         public ICommand OpenLuaFolderCommand { get; }
         public ICommand InstallGameCommand { get; }
         public ICommand SelectSearchResultCommand { get; }
+        public ICommand ImportFilesCommand { get; }
+        public ICommand DismissMultiImportCommand { get; }
+
+    // --- Methods ---
+
+    private void LoadRecentActivity()
+    {
+        var history = _settings.Settings.DownloadHistory
+            .OrderByDescending(h => h.DownloadDate)
+            .Take(5)
+            .ToList();
+
+        RecentActivity.Clear();
+        foreach (var entry in history)
+        {
+            RecentActivity.Add(entry);
+        }
+    }
+
+    /// <summary>
+    /// Smart drag-and-drop handler. Detects file types and routes to the appropriate import method.
+    /// Single .lua → full game card display (same UX as search+download).
+    /// .zip → multi-game import with grid display.
+    /// </summary>
+    private async Task SmartImportFilesAsync(string[]? files)
+    {
+        if (files == null || files.Length == 0) return;
+
+        // Determine what we're importing
+        var luaFiles = files.Where(f => Path.GetExtension(f).Equals(".lua", StringComparison.OrdinalIgnoreCase)).ToList();
+        var zipFiles = files.Where(f => Path.GetExtension(f).Equals(".zip", StringComparison.OrdinalIgnoreCase)).ToList();
+
+        // Single lua file → show as single game card (like a normal download)
+        if (luaFiles.Count == 1 && zipFiles.Count == 0)
+        {
+            await ImportSingleLuaAsync(luaFiles[0]);
+            return;
+        }
+
+        // Multiple lua files or zip → multi-game import
+        if (zipFiles.Count > 0 || luaFiles.Count > 1)
+        {
+            await ImportMultipleAsync(luaFiles, zipFiles);
+            return;
+        }
+
+        // Fallback for unsupported files
+        HasError = true;
+        StatusMessage = "Only .lua and .zip files are supported for import.";
+    }
+
+    /// <summary>
+    /// Import a single .lua file and display it as a full game card (same UX as downloading a game).
+    /// </summary>
+    private async Task ImportSingleLuaAsync(string luaPath)
+    {
+        IsDownloading = true;
+        IsComplete = false;
+        HasError = false;
+        Progress = 0;
+        GameName = null;
+        GameImage = null;
+        GameDescription = null;
+        GameType = null;
+        GameReleaseDate = null;
+        ResultSummary = null;
+        _lastLuaFilePath = null;
+        ShowSearchResults = false;
+        CommandManager.InvalidateRequerySuggested();
+
+        DiscordService.Instance.SetPresence("Importing Lua config...", "Working");
+
+        try
+        {
+            Progress = 20;
+            StatusMessage = "Parsing Lua file...";
+
+            var result = await _importService.SmartImportLuaAsync(
+                luaPath,
+                onStatus: msg => Application.Current?.Dispatcher.Invoke(() => StatusMessage = msg));
+
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                Progress = 60;
+
+                if (result.Success)
+                {
+                    // Set the app ID input to reflect the imported game
+                    _appIdInput = result.AppId;
+                    OnPropertyChanged(nameof(AppIdInput));
+
+                    IsComplete = true;
+                    GameName = result.GameName;
+                    DiscordService.Instance.SetPresence("Exploring the Vault", "Idle");
+                    GameImage = result.HeaderImageUrl;
+
+                    // Try to get more details from Steam API
+                    try
+                    {
+                        var gameInfo = await _steamApi.GetAppDetailsAsync(result.AppId);
+                        if (gameInfo != null)
+                        {
+                            GameDescription = gameInfo.ShortDescription;
+                            GameType = gameInfo.Type;
+                            GameReleaseDate = gameInfo.ReleaseDate;
+                            ShowMultiplayerWarning = gameInfo.HasMultiplayerCategories;
+
+                            // Compute estimated size
+                            var totalBytes = gameInfo.Depots?.Sum(d => d.SizeBytes) ?? 0;
+                            if (totalBytes > 0)
+                                EstimatedSize = FormatBytes(totalBytes);
+                        }
+                    }
+                    catch { }
+
+                    _lastLuaFilePath = Path.Combine(
+                        _settings.Settings.LuaOutputPath ?? "",
+                        $"{result.AppId}.lua");
+
+                    var manifestText = result.ManifestCount > 0 ? $" · {result.ManifestCount} manifest(s)" : "";
+                    ResultSummary = $"Imported via drag-and-drop{manifestText}";
+                    StatusMessage = $"✓ {result.GameName} imported successfully!";
+                    Progress = 100;
+
+                    // Add to download history
+                    _settings.Settings.DownloadHistory.Add(new DownloadHistoryEntry
+                    {
+                        AppId = result.AppId,
+                        GameName = result.GameName,
+                        HeaderImageUrl = result.HeaderImageUrl,
+                        DownloadDate = DateTime.Now,
+                        Status = "Imported"
+                    });
+                    _settings.Save();
+                    LoadRecentActivity();
+                }
+                else
+                {
+                    HasError = true;
+                    StatusMessage = $"✗ Import failed: {result.ErrorMessage}";
+                    DiscordService.Instance.SetPresence("Exploring the Vault", "Idle");
+                }
+
+                CommandManager.InvalidateRequerySuggested();
+            });
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            StatusMessage = $"✗ Unexpected error: {ex.Message}";
+        }
+        finally
+        {
+            IsDownloading = false;
+        }
+    }
+
+    /// <summary>
+    /// Import multiple .lua files and/or .zip files. Shows the multi-game import UI.
+    /// </summary>
+    private async Task ImportMultipleAsync(List<string> luaFiles, List<string> zipFiles)
+    {
+        IsMultiImporting = true;
+        MultiImportComplete = false;
+        ImportedGames.Clear();
+        MultiImportSummary = "Preparing import...";
+
+        DiscordService.Instance.SetPresence("Importing configs...", "Working");
+
+        try
+        {
+            // Process zip files first
+            foreach (var zipFile in zipFiles)
+            {
+                MultiImportSummary = $"Processing {Path.GetFileName(zipFile)}...";
+
+                await _importService.SmartImportZipAsync(
+                    zipFile,
+                    onGameDiscovered: game =>
+                    {
+                        Application.Current?.Dispatcher.Invoke(() =>
+                        {
+                            ImportedGames.Add(game);
+                            MultiImportSummary = $"Importing {ImportedGames.Count} game(s)...";
+                        });
+                    },
+                    onStatus: msg => Application.Current?.Dispatcher.Invoke(() => MultiImportSummary = msg));
+            }
+
+            // Process individual lua files
+            foreach (var luaFile in luaFiles)
+            {
+                var game = new ImportedGameInfo
+                {
+                    LuaSourcePath = luaFile,
+                    AppId = Path.GetFileNameWithoutExtension(luaFile),
+                    Status = "Queued"
+                };
+
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    ImportedGames.Add(game);
+                    MultiImportSummary = $"Importing {ImportedGames.Count} game(s)...";
+                });
+
+                var result = await _importService.SmartImportLuaAsync(
+                    luaFile,
+                    onStatus: msg => Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        game.Status = "Processing";
+                    }));
+
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    game.GameName = result.GameName;
+                    game.HeaderImageUrl = result.HeaderImageUrl;
+                    game.AppId = result.AppId;
+                    game.ManifestCount = result.ManifestCount;
+                    game.Success = result.Success;
+                    game.Status = result.Status;
+                    game.ErrorMessage = result.ErrorMessage;
+                });
+            }
+
+            // Final summary
+            var successCount = ImportedGames.Count(g => g.Success);
+            var failCount = ImportedGames.Count(g => !g.Success && g.Status == "Failed");
+            var totalManifests = ImportedGames.Sum(g => g.ManifestCount);
+
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                var parts = new List<string>();
+                parts.Add($"{successCount} game(s) imported");
+                if (totalManifests > 0) parts.Add($"{totalManifests} manifest(s)");
+                if (failCount > 0) parts.Add($"{failCount} failed");
+
+                MultiImportSummary = string.Join(" · ", parts);
+                MultiImportComplete = true;
+
+                // Add all successful imports to download history
+                foreach (var game in ImportedGames.Where(g => g.Success))
+                {
+                    _settings.Settings.DownloadHistory.Add(new DownloadHistoryEntry
+                    {
+                        AppId = game.AppId,
+                        GameName = game.GameName,
+                        HeaderImageUrl = game.HeaderImageUrl,
+                        DownloadDate = DateTime.Now,
+                        Status = "Imported"
+                    });
+                }
+                _settings.Save();
+                LoadRecentActivity();
+            });
+
+            DiscordService.Instance.SetPresence("Exploring the Vault", "Idle");
+        }
+        catch (Exception ex)
+        {
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                MultiImportSummary = $"Import error: {ex.Message}";
+                MultiImportComplete = true;
+            });
+        }
+    }
+
+    private void DismissMultiImport()
+    {
+        IsMultiImporting = false;
+        ImportedGames.Clear();
+        MultiImportSummary = "";
+        MultiImportComplete = false;
+        _ = LoadFeaturedGamesAsync();
+    }
 
     // --- Search ---
     private void TriggerSearch(string query)
     {
-        _searchDebounce?.Stop();
-        _searchDebounce?.Dispose();
+        _debounceCts?.Cancel();
 
         if (string.IsNullOrWhiteSpace(query) || query.Length < 1)
         {
@@ -264,17 +586,21 @@ public class DashboardViewModel : ViewModelBase
             return;
         }
 
-        // Debounce: wait 400ms after user stops typing
-        _searchDebounce = new System.Timers.Timer(200);
-        _searchDebounce.AutoReset = false;
-        _searchDebounce.Elapsed += async (_, _) =>
+        var cts = new CancellationTokenSource();
+        _debounceCts = cts;
+
+        _ = Task.Run(async () =>
         {
-            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            try
             {
-                await PerformSearchAsync(query);
-            });
-        };
-        _searchDebounce.Start();
+                await Task.Delay(200, cts.Token);
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
+                {
+                    await PerformSearchAsync(query);
+                });
+            }
+            catch (OperationCanceledException) { }
+        });
     }
 
     private async Task PerformSearchAsync(string query)
@@ -318,13 +644,12 @@ public class DashboardViewModel : ViewModelBase
         var appId = AppIdInput.Trim();
 
         // Ask user if they want to include DLCs
-        bool includeDlcs = false;
-        var dlcChoice = System.Windows.MessageBox.Show(
-            "Do you want to include all available DLCs for this game?",
-            "Include DLCs?",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-        includeDlcs = dlcChoice == MessageBoxResult.Yes;
+        var dialog = new SteamVault.Views.ModernDialogWindow(
+            "Do you want to include all available DLCs in this config?", 
+            "Include DLCs?");
+        var dlcChoice = dialog.ShowDialog();
+        
+        bool includeDlcs = dlcChoice == true;
 
         IsDownloading = true;
         IsComplete = false;
@@ -364,6 +689,20 @@ public class DashboardViewModel : ViewModelBase
                     _lastLuaFilePath = result.LuaFilePath;
                     ShowMultiplayerWarning = result.Game?.HasMultiplayerCategories ?? false;
 
+                    // Add to search history
+                    if (!string.IsNullOrWhiteSpace(GameName))
+                    {
+                        if (SearchHistoryList.Contains(GameName))
+                            SearchHistoryList.Remove(GameName);
+                        SearchHistoryList.Insert(0, GameName);
+                        
+                        while (SearchHistoryList.Count > 10)
+                            SearchHistoryList.RemoveAt(SearchHistoryList.Count - 1);
+
+                        _settings.Settings.SearchHistory = SearchHistoryList.ToList();
+                        _settings.Save();
+                    }
+
                     // Compute estimated size
                     var totalBytes = result.Depots?.Sum(d => d.SizeBytes) ?? 0;
                     if (totalBytes > 0)
@@ -375,6 +714,9 @@ public class DashboardViewModel : ViewModelBase
                     ResultSummary = $"{result.DepotCount} depot(s) · {result.KeysAttached} key(s){dlcText} · Lua saved";
                     StatusMessage = $"✓ {result.GameName} installed successfully!";
                     Progress = 100;
+                    
+                    // Update recent activity
+                    LoadRecentActivity();
                 }
                 else
                 {
@@ -401,15 +743,10 @@ public class DashboardViewModel : ViewModelBase
                                 : $"{stats.CurrentPlayers} playing now";
                         }
 
-                        if (stats.MetacriticScore > 0)
-                        {
-                            ReviewScoreText += $"Metacritic: {stats.MetacriticScore} · ";
-                        }
-
-                        if (stats.PositiveReviewPercent > 0)
-                        {
-                            ReviewScoreText += $"{stats.PositiveReviewPercent}% positive";
-                        }
+                        var reviewParts = new List<string>();
+                        if (stats.MetacriticScore > 0) reviewParts.Add($"Metacritic: {stats.MetacriticScore}");
+                        if (stats.PositiveReviewPercent > 0) reviewParts.Add($"{stats.PositiveReviewPercent}% positive");
+                        ReviewScoreText = string.Join(" · ", reviewParts);
 
                         ShowSteamDbStats = !string.IsNullOrEmpty(PlayerCountText) || !string.IsNullOrEmpty(ReviewScoreText);
                     }
@@ -604,20 +941,21 @@ public class DashboardViewModel : ViewModelBase
         HasError = false;
         AppIdInput = "";
         _lastLuaFilePath = null;
+        IsMultiImporting = false;
+        ImportedGames.Clear();
+        MultiImportComplete = false;
         CommandManager.InvalidateRequerySuggested();
         _ = LoadFeaturedGamesAsync();
     }
 
     private void ToggleAutoUpdate()
     {
-        _settings.Settings.AutoUpdateEnabled = !_settings.Settings.AutoUpdateEnabled;
+        _settings.Settings.AutoUpdateEnabled = false;
         _settings.Save();
         OnPropertyChanged(nameof(AutoUpdateText));
     }
 
-    public string AutoUpdateText => _settings.Settings.AutoUpdateEnabled
-        ? "Auto-update: ON"
-        : "Auto-update: OFF";
+    public string AutoUpdateText => "Auto-update: Disabled (Maintenance)";
 
     private async Task UpdateFeaturedGameAsync(FeaturedGameEntry? entry)
     {

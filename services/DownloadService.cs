@@ -8,7 +8,6 @@ public class DownloadService
     private readonly SteamApiService _steamApi;
     private readonly DepotKeyService _depotKeyService;
     private readonly LuaGeneratorService _luaGenerator;
-    private readonly ManifestDownloadService _manifestDownloader;
     private readonly SettingsService _settings;
 
     private static readonly string LogFilePath = Path.Combine(
@@ -19,15 +18,17 @@ public class DownloadService
         SteamApiService steamApi,
         DepotKeyService depotKeyService,
         LuaGeneratorService luaGenerator,
-        ManifestDownloadService manifestDownloader,
         SettingsService settings)
     {
         _steamApi = steamApi;
         _depotKeyService = depotKeyService;
         _luaGenerator = luaGenerator;
-        _manifestDownloader = manifestDownloader;
         _settings = settings;
     }
+
+    public int RestoreManifestsForApp(string appId) => 0;
+    public int RestoreAllVaultManifests() => 0;
+
 
     private static void LogLine(string message)
     {
@@ -106,18 +107,34 @@ public class DownloadService
             {
                 if (depots.Any(d => string.IsNullOrWhiteSpace(d.DecryptionKey) && !string.IsNullOrWhiteSpace(d.ManifestId)))
                 {
-                    result.Error = $"Found {depots.Count} depot(s) but failed to find Decryption Keys. Please ensure your keys are synced or the game is in the database.";
+                    result.Error = $"Found {depots.Count} depot(s) but failed to find Decryption Keys. This game has been automatically added to the request list at getsteamvault.com/request";
                 }
                 else
                 {
                     result.Error = $"Found {depots.Count} depot(s) but none have manifest IDs resolved.";
                 }
+
+                // Auto-submit a game request to the website (fire-and-forget, non-blocking)
+                _ = GameRequestService.SubmitRequestAsync(
+                    appId,
+                    game.Name,
+                    game.HeaderImageUrl,
+                    missingKeyDepotIds);
+
                 return result;
             }
 
             if (missingKeyDepotIds.Count > 0 && keysAttached == 0)
             {
-                result.Error = $"Found {depots.Count} depot(s) with {manifestsResolved} manifests, but NO decryption keys available.";
+                result.Error = $"Found {depots.Count} depot(s) with {manifestsResolved} manifests, but NO decryption keys available. This game has been automatically added to the request list at getsteamvault.com/request";
+
+                // Auto-submit a game request to the website (fire-and-forget, non-blocking)
+                _ = GameRequestService.SubmitRequestAsync(
+                    appId,
+                    game.Name,
+                    game.HeaderImageUrl,
+                    missingKeyDepotIds);
+
                 return result;
             }
 
@@ -243,36 +260,15 @@ public class DownloadService
 
             LogLine($"Generating Lua — base depots: {luaEntries.Count}, DLC entries: {dlcEntries.Count}, AppKey: {(appDecryptionKey != null ? "yes" : "no")}, AppTicket: {(game.AppTicket != null ? "yes" : "no")}, ETicket: {(game.ETicket != null ? "yes" : "no")}");
             var luaFilePath = _luaGenerator.GenerateLuaFile(appId, game.Name, luaEntries, luaOutputPath, game.AppAccessToken, dlcEntries.Count > 0 ? dlcEntries : null, game.AppTicket, game.ETicket, appDecryptionKey);
-            onProgress?.Invoke(90);
-
-            // Step 6: Manifest download (best-effort)
-            var manifestsDownloaded = 0;
-            var depotEntriesForManifest = new List<(uint DepotId, ulong ManifestGid, uint AppId)>();
-            foreach (var depot in usableDepots)
-            {
-                if (!string.IsNullOrWhiteSpace(depot.ManifestId) && uint.TryParse(depot.DepotId, out var depId) && ulong.TryParse(depot.ManifestId, out var gid) && uint.TryParse(appId, out var aid))
-                    depotEntriesForManifest.Add((depId, gid, aid));
-            }
-            if (depotEntriesForManifest.Count > 0)
-            {
-                try
-                {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    manifestsDownloaded = await _manifestDownloader.DownloadAllManifestsAsync(depotEntriesForManifest, cancellationToken: cts.Token);
-                }
-                catch (OperationCanceledException)
-                { LogLine("Manifest download timed out."); }
-                catch (Exception ex)
-                { LogLine($"Manifest download skipped: {ex.Message}"); }
-            }
-
             onProgress?.Invoke(100);
+
             result.Success = true;
+
             result.LuaFilePath = luaFilePath;
             result.DepotCount = usableDepots.Count;
             result.KeysAttached = keysAttached;
             result.ManifestsResolved = manifestsResolved;
-            result.ManifestsDownloaded = manifestsDownloaded;
+            result.ManifestsDownloaded = 0;
             result.DlcCount = dlcProcessed;
             result.TotalDlcs = totalDlcs;
             result.MissingKeyDepotIds = missingKeyDepotIds;
@@ -281,11 +277,11 @@ public class DownloadService
             result.Depots = depots;
 
             var parts = new List<string> { $"Lua: {usableDepots.Count} depot(s)" };
-            if (manifestsDownloaded > 0) parts.Add($"{manifestsDownloaded} manifest(s)");
             if (missingKeyDepotIds.Count > 0) parts.Add($"{missingKeyDepotIds.Count} missing keys");
             if (result.MissingManifestDepotIds.Count > 0) parts.Add($"{result.MissingManifestDepotIds.Count} missing manifests");
             if (dlcProcessed > 0) parts.Add($"{dlcProcessed} DLC(s)");
             onStatus?.Invoke($"Done! {string.Join(", ", parts)} — {Path.GetFileName(luaFilePath)}");
+
 
             _settings.Settings.DownloadHistory.Add(new DownloadHistoryEntry
             {

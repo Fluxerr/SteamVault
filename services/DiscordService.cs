@@ -13,6 +13,9 @@ public class DiscordService : IDisposable
     // Replace with your real Discord Developer Application ID
     private const string ClientId = "1257489247192837482"; 
 
+    public event Action<DiscordRPC.User>? OnUserReady;
+    public DiscordRPC.User? CurrentUser { get; private set; }
+
     private DiscordService()
     {
     }
@@ -22,6 +25,14 @@ public class DiscordService : IDisposable
         try
         {
             _client = new DiscordRpcClient(ClientId);
+            _client.OnReady += (sender, e) =>
+            {
+                if (e.User != null)
+                {
+                    CurrentUser = e.User;
+                    OnUserReady?.Invoke(e.User);
+                }
+            };
             _client.Initialize();
             
             SetPresence("Exploring the Vault", "Idle");

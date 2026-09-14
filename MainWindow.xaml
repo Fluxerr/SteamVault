@@ -11,13 +11,13 @@
         MinWidth="900" MinHeight="600"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
-        TextOptions.TextFormattingMode="Ideal"
-        TextOptions.TextRenderingMode="Auto"
-        TextOptions.TextHintingMode="Auto"
-        RenderOptions.ClearTypeHint="Auto">
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        TextOptions.TextHintingMode="Fixed"
+        RenderOptions.ClearTypeHint="Enabled">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="42" ResizeBorderThickness="7" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="7" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
     <Grid>
@@ -27,12 +27,12 @@
         </Grid.RowDefinitions>
 
         <!-- TITLEBAR -->
-        <Border Grid.Row="0" Background="Transparent" WindowChrome.IsHitTestVisibleInChrome="False">
+        <Border Grid.Row="0" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0">
                     <TextBlock Text="SteamVault" FontFamily="pack://application:,,,/Fonts/#Inter, Segoe UI, sans-serif" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource Text}"/>
                     <Border CornerRadius="6" Background="{DynamicResource SurfaceBase}" Padding="6,2" Margin="12,0,0,0">
-                        <TextBlock Text="v2.5.1" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace" FontSize="10" Foreground="{DynamicResource DimText}" VerticalAlignment="Center"/>
+                        <TextBlock Text="v2.6.0" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace" FontSize="10" Foreground="{DynamicResource DimText}" VerticalAlignment="Center"/>
                     </Border>
                 </StackPanel>
 
@@ -82,8 +82,17 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
+
+                    <!-- Sidebar Theme Watermark -->
+                    <Rectangle Grid.RowSpan="2" Fill="{DynamicResource ThemeTopBarDecoration}" IsHitTestVisible="False" VerticalAlignment="Bottom" Height="450" Opacity="0.5">
+                        <Rectangle.OpacityMask>
+                            <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                                <GradientStop Color="Black" Offset="0"/>
+                                <GradientStop Color="Transparent" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.OpacityMask>
+                    </Rectangle>
 
                     <StackPanel Grid.Row="0" Margin="12,16,12,0">
                         <TextBlock Text="WORKSPACE" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource DimText}" Margin="16,0,0,12"/>
@@ -108,7 +117,18 @@
                         <RadioButton Command="{Binding NavigateOnlineCommand}" IsChecked="{Binding IsOnlineActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{DynamicResource SidebarNavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE774;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Online Fixes" VerticalAlignment="Center"/>
+                                <TextBlock Text="Fixes" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <!-- Bottom Nav -->
+                    <StackPanel Grid.Row="0" VerticalAlignment="Bottom" Margin="12,0,12,12">
+                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="16,0,16,12" Opacity="0.5"/>
+                        <RadioButton Command="{Binding NavigateStatsCommand}" IsChecked="{Binding IsStatsActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{DynamicResource SidebarNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Analytics" VerticalAlignment="Center"/>
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Command="{Binding NavigateSettingsCommand}" IsChecked="{Binding IsSettingsActive, Mode=OneWay}" GroupName="SidebarGroup" Style="{DynamicResource SidebarNavButton}">
@@ -119,13 +139,8 @@
                         </RadioButton>
                     </StackPanel>
 
-                    <!-- LOCAL VAULT FOOTER -->
-                    <StackPanel Grid.Row="1" Margin="24,0,24,4">
-                        <TextBlock Text="LOCAL VAULT" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource DimText}"/>
-                    </StackPanel>
-
                     <!-- GAME COUNT + ONLINE STATUS -->
-                    <Grid Grid.Row="2" Margin="24,0,24,32">
+                    <Grid Grid.Row="1" Margin="24,12,24,24">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -157,7 +172,7 @@
                                         </Style>
                                     </Ellipse.Style>
                                 </Ellipse>
-                                <TextBlock Text="Online" Foreground="{DynamicResource SuccessBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text="ONLINE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -175,7 +190,11 @@
                             <views:InstallationView />
                         </DataTemplate>
                         <DataTemplate DataType="{x:Type viewmodels:MainViewModel}">
-                            <ContentControl Content="{Binding CurrentView, NotifyOnTargetUpdated=True}">
+                            <ContentControl Content="{Binding CurrentView, NotifyOnTargetUpdated=True}"
+                                            RenderTransformOrigin="0.5,0.5">
+                                <ContentControl.RenderTransform>
+                                    <TranslateTransform x:Name="PageTranslate" Y="0"/>
+                                </ContentControl.RenderTransform>
                                 <ContentControl.Style>
                                     <Style TargetType="ContentControl">
                                         <Style.Triggers>
@@ -183,21 +202,18 @@
                                                 <BeginStoryboard>
                                                     <Storyboard>
                                                         <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <CubicEase EasingMode="EaseOut"/>
-                                                            </DoubleAnimation.EasingFunction>
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                                         </DoubleAnimation>
-                                                        <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,20,0,0" To="0,0,0,0" Duration="0:0:0.35">
-                                                            <ThicknessAnimation.EasingFunction>
-                                                                <CubicEase EasingMode="EaseOut"/>
-                                                            </ThicknessAnimation.EasingFunction>
-                                                        </ThicknessAnimation>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="12" To="0" Duration="0:0:0.3">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </EventTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </ContentControl.Style>
+
                                 <ContentControl.Resources>
                                     <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
                                         <views:DashboardView />
@@ -213,6 +229,9 @@
                                     </DataTemplate>
                                     <DataTemplate DataType="{x:Type viewmodels:OnlineViewModel}">
                                         <views:OnlineView />
+                                    </DataTemplate>
+                                    <DataTemplate DataType="{x:Type viewmodels:StatsViewModel}">
+                                        <views:StatsView />
                                     </DataTemplate>
                                 </ContentControl.Resources>
                             </ContentControl>

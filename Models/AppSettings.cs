@@ -6,7 +6,52 @@ public class AppSettings
 {
     public string SteamDirectory { get; set; } = "";
     public string LuaOutputPath { get; set; } = "";
+    public string DepotcachePath { get; set; } = "";
+
+    public string GetEffectiveDepotcachePath()
+    {
+        if (!string.IsNullOrWhiteSpace(DepotcachePath))
+            return DepotcachePath;
+
+        if (!string.IsNullOrWhiteSpace(SteamDirectory))
+            return Path.Combine(SteamDirectory, "config", "depotcache");
+
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "SteamVault", "depotcache");
+    }
+
+    public List<string> GetAllDepotcachePaths()
+    {
+        var paths = new List<string>();
+
+        // Primary location: config/depotcache (or custom DepotcachePath)
+        var primary = GetEffectiveDepotcachePath();
+        if (!string.IsNullOrWhiteSpace(primary))
+            paths.Add(primary);
+
+        // Secondary location: depotcache (directly under Steam directory)
+        if (!string.IsNullOrWhiteSpace(SteamDirectory))
+        {
+            var secondary = Path.Combine(SteamDirectory, "depotcache");
+            if (!paths.Contains(secondary, StringComparer.OrdinalIgnoreCase))
+            {
+                paths.Add(secondary);
+            }
+        }
+
+        return paths;
+    }
+
+    private void EnsureDerivedPaths()
+    {
+        if (string.IsNullOrWhiteSpace(LuaOutputPath))
+            LuaOutputPath = Path.Combine(SteamDirectory, "config", "lua");
+        if (string.IsNullOrWhiteSpace(DepotcachePath))
+            DepotcachePath = Path.Combine(SteamDirectory, "config", "depotcache");
+    }
     public List<DownloadHistoryEntry> DownloadHistory { get; set; } = new();
+    public List<string> SearchHistory { get; set; } = new();
 
     /// <summary>
     /// Whether OpenSteamTool has been installed (DLLs copied to Steam directory).
@@ -21,10 +66,25 @@ public class AppSettings
     public bool AutoUpdateEnabled { get; set; } = false;
 
     /// <summary>
-    /// Currently selected theme name. Default is "Dark" (the original premium purple theme).
-    /// Valid values: "Dark", "AmoledBlack", "MidnightBlue", "SlateGray", "EmeraldNight"
+    /// The last version of the application that was run. Used to show "What's New" on updates.
     /// </summary>
-    public string Theme { get; set; } = "Dark";
+    public string LastRunVersion { get; set; } = "1.0.0.0";
+
+    /// <summary>
+    /// Tracks which version's "What's New" dialog has actually been displayed and dismissed by the user.
+    /// </summary>
+    public string ShownWhatsNewVersion { get; set; } = "";
+
+    /// <summary>
+    /// Currently selected theme name. Default is "Gruvbox" (retro warm dark theme).
+    /// </summary>
+    public string Theme { get; set; } = "Gruvbox";
+
+    /// <summary>
+    /// Custom accent color overrides the theme's primary accent. Stored as hex (#RRGGBB).
+    /// If null or empty, the theme's default accent is used.
+    /// </summary>
+    public string? CustomAccentColor { get; set; }
 
     /// <summary>
     /// Default export / backup directory. If empty, the user is prompted.
@@ -70,12 +130,6 @@ public class AppSettings
         SteamDirectory = @"C:\Program Files (x86)\Steam";
         EnsureDerivedPaths();
         return false;
-    }
-
-    private void EnsureDerivedPaths()
-    {
-        if (string.IsNullOrWhiteSpace(LuaOutputPath))
-            LuaOutputPath = Path.Combine(SteamDirectory, "config", "lua");
     }
 }
 

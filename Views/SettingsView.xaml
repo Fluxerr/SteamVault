@@ -4,9 +4,15 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:viewmodels="clr-namespace:SteamVault.ViewModels"
+             xmlns:converters="clr-namespace:SteamVault.Converters"
              d:DataContext="{d:DesignInstance Type=viewmodels:SettingsViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="900">
+             
+    <UserControl.Resources>
+        <converters:EqualityConverter x:Key="EqualityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
 
     <Grid Margin="48,40,48,40">
         <Grid.RowDefinitions>
@@ -14,6 +20,17 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+
+        <!-- Settings Watermark -->
+        <Rectangle Grid.RowSpan="3" Fill="{DynamicResource ThemeTopBarDecoration}" Opacity="0.12" IsHitTestVisible="False" 
+                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="600" Height="600" Margin="0,0,-150,-150">
+            <Rectangle.OpacityMask>
+                <RadialGradientBrush GradientOrigin="0.5,0.5" Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                    <GradientStop Color="Black" Offset="0.2"/>
+                    <GradientStop Color="Transparent" Offset="1"/>
+                </RadialGradientBrush>
+            </Rectangle.OpacityMask>
+        </Rectangle>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,32">
             <TextBlock Text="Settings" Style="{DynamicResource TitleText}"/>
@@ -34,11 +51,16 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="Automatic Background Updates" FontWeight="Medium" FontSize="14" Margin="0,0,0,4"/>
-                                <TextBlock Text="Starts SteamVault on system boot (minimized). Silently updates game configurations in the background." 
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="Automatic Background Updates" FontWeight="Medium" FontSize="14" Margin="0,0,8,0"/>
+                                    <Border Background="#30F87171" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock Text="TEMPORARILY DISABLED" Foreground="#EF4444" FontSize="10" FontWeight="Bold"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="Automatic background updates are currently under maintenance and temporarily disabled." 
                                            Foreground="{DynamicResource MutedText}" TextWrapping="Wrap" FontSize="13" MaxWidth="600" HorizontalAlignment="Left"/>
                             </StackPanel>
-                            <CheckBox Grid.Column="1" Style="{DynamicResource ToggleSwitch}" IsChecked="{Binding AutoUpdateEnabled, Mode=TwoWay}" VerticalAlignment="Center"/>
+                            <CheckBox Grid.Column="1" Style="{DynamicResource ToggleSwitch}" IsChecked="False" IsEnabled="False" VerticalAlignment="Center" ToolTip="Auto-updates are temporarily disabled."/>
                         </Grid>
 
                         <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,24"/>
@@ -46,8 +68,7 @@
                         <!-- Theme Selection -->
                         <TextBlock Text="Appearance" Style="{DynamicResource SectionHeader}" Margin="0,0,0,16"/>
                         <TextBlock Text="Choose a color palette. The UI immediately applies the selection." Foreground="{DynamicResource MutedText}" FontSize="13" Margin="0,0,0,16"/>
-                        
-                        <ItemsControl ItemsSource="{Binding AvailableThemes}">
+                        <ItemsControl ItemsSource="{Binding ThemePreviews}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel/>
@@ -55,10 +76,108 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding}" Command="{Binding DataContext.ChangeThemeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="0,0,12,12" Style="{DynamicResource GhostButton}" Width="160" Height="48"/>
+                                    <Border Margin="0,0,16,16" CornerRadius="8" Cursor="Hand" Width="140"
+                                            Background="{DynamicResource SurfaceRaised}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderThickness" Value="1"/>
+                                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryAccent}"/>
+                                                        <Setter Property="BorderThickness" Value="2"/>
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource SurfaceHover}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick" 
+                                                          Command="{Binding DataContext.ChangeThemeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                          CommandParameter="{Binding Name}"/>
+                                        </Border.InputBindings>
+                                        
+                                        <StackPanel Margin="12">
+                                            <!-- Preview Swatches -->
+                                            <Grid Height="40" Margin="0,0,0,8" ClipToBounds="True">
+                                                <Border CornerRadius="4" Background="{Binding BackgroundHex}"/>
+                                                <Border Margin="24,12,8,8" CornerRadius="2" Background="{Binding SurfaceHex}"/>
+                                                <Border Margin="8,8,0,0" Width="10" Height="10" CornerRadius="5" HorizontalAlignment="Left" VerticalAlignment="Top" Background="{Binding AccentHex}"/>
+                                            </Grid>
+                                            
+                                            <Grid>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource Text}"/>
+                                                    <Border Margin="6,0,0,0" Background="{DynamicResource PrimaryAccent}" CornerRadius="4" Padding="4,2" 
+                                                            Visibility="{Binding IsCommunity, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                                                        <TextBlock Text="COMMUNITY" FontSize="9" FontWeight="Bold" Foreground="White" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="&#xE73E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" 
+                                                           Foreground="{DynamicResource PrimaryAccent}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                           Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+
+                        <!-- Custom Accent Picker -->
+                        <TextBlock Text="Custom Accent Color" FontWeight="Medium" FontSize="14" Margin="0,16,0,8"/>
+                        <TextBlock Text="Override the theme's default accent color." Foreground="{DynamicResource MutedText}" FontSize="13" Margin="0,0,0,12"/>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <ItemsControl ItemsSource="{Binding CustomAccentColors}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <RadioButton GroupName="CustomAccent" Margin="0,0,8,8" Cursor="Hand"
+                                                     Command="{Binding DataContext.SetAccentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     CommandParameter="{Binding}">
+                                            <RadioButton.IsChecked>
+                                                <MultiBinding Converter="{StaticResource EqualityConverter}" Mode="OneWay">
+                                                    <Binding Path="DataContext.SelectedCustomAccent" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                    <Binding Path="." />
+                                                </MultiBinding>
+                                            </RadioButton.IsChecked>
+                                            <RadioButton.Template>
+                                                <ControlTemplate TargetType="RadioButton">
+                                                    <Grid Width="32" Height="32">
+                                                        <Ellipse Fill="{Binding}" StrokeThickness="2">
+                                                            <Ellipse.Style>
+                                                                <Style TargetType="Ellipse">
+                                                                    <Setter Property="Stroke" Value="Transparent"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}" Value="True">
+                                                                            <Setter Property="Stroke" Value="{DynamicResource Text}"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Ellipse.Style>
+                                                        </Ellipse>
+                                                    </Grid>
+                                                </ControlTemplate>
+                                            </RadioButton.Template>
+                                        </RadioButton>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            
+                            <Button Grid.Column="1" Content="Clear Accent" Command="{Binding ClearAccentCommand}" 
+                                    Style="{DynamicResource GhostButton}" VerticalAlignment="Top" Padding="12,6"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -78,7 +197,7 @@
                                 <TextBlock Text="Bundle all managed Lua configs and depot manifests into a ZIP file." Foreground="{DynamicResource MutedText}" FontSize="13" TextWrapping="Wrap"/>
                                 <TextBlock Text="{Binding ExportStatus}" Foreground="{DynamicResource SuccessBrush}" FontSize="13" Margin="0,8,0,0" FontWeight="Medium"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="Export to ZIP" Command="{Binding ExportLuaCommand}" Width="160" Height="40" Style="{DynamicResource GhostButton}" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="Export to ZIP" Command="{Binding ExportLuaCommand}" Width="160" Height="40" Style="{DynamicResource DrawOutlineGhostButton}" VerticalAlignment="Center"/>
                         </Grid>
 
                         <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,24"/>
@@ -101,7 +220,7 @@
                                 <TextBlock Text="Update Database" FontWeight="Medium" FontSize="14" Margin="0,0,0,4"/>
                                 <TextBlock Text="{Binding SyncStatusMessage}" Foreground="{DynamicResource DimText}" FontSize="13" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="Check for Updates" Command="{Binding SyncDatabaseCommand}" Width="180" Height="40" Style="{DynamicResource GhostButton}" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="Check for Updates" Command="{Binding SyncDatabaseCommand}" Width="180" Height="40" Style="{DynamicResource DrawOutlineGhostButton}" VerticalAlignment="Center"/>
                         </Grid>
 
                         <Grid>
@@ -113,7 +232,7 @@
                                 <TextBlock Text="Force Rescan Sources" FontWeight="Medium" FontSize="14" Margin="0,0,0,4"/>
                                 <TextBlock Text="{Binding RescanStatusMessage}" Foreground="{DynamicResource DimText}" FontSize="13" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="Rescan All Sources" Command="{Binding RescanKeysCommand}" Width="180" Height="40" Style="{DynamicResource GhostButton}" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="Rescan All Sources" Command="{Binding RescanKeysCommand}" Width="180" Height="40" Style="{DynamicResource DrawOutlineGhostButton}" VerticalAlignment="Center"/>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -132,13 +251,22 @@
                             <TextBox Grid.Column="1" Text="{Binding Settings.SteamDirectory, Mode=TwoWay}" Height="48" Tag="C:\Program Files (x86)\Steam" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace"/>
                         </Grid>
 
-                        <Grid>
+                        <Grid Margin="0,0,0,24">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="200" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Lua Target Path" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}" FontSize="13"/>
                             <TextBox Grid.Column="1" Text="{Binding Settings.LuaOutputPath, Mode=TwoWay}" Height="48" Tag="C:\Program Files (x86)\Steam\config\lua" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace"/>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Manifest Depotcache Path" VerticalAlignment="Center" Foreground="{DynamicResource MutedText}" FontSize="13"/>
+                            <TextBox Grid.Column="1" Text="{Binding Settings.DepotcachePath, Mode=TwoWay}" Height="48" Tag="C:\Program Files (x86)\Steam\config\depotcache" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace"/>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -154,22 +282,7 @@
                             <TextBlock Text="Join the SteamVault Discord" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,4" Foreground="#A5B4FC"/>
                             <TextBlock Text="Request missing decryption keys, report bugs, or get help from the community." Foreground="#A5B4FC" FontSize="13" TextWrapping="Wrap" Opacity="0.8"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Content="Open Discord" Command="{Binding JoinDiscordCommand}" Width="160" Height="40" VerticalAlignment="Center">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                    <Setter Property="Background" Value="#5865F2"/>
-                                    <Setter Property="Foreground" Value="White"/>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#4752C4"/>
-                                        </Trigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Setter Property="Background" Value="#3C45A5"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                        <Button Grid.Column="1" Content="Open Discord" Command="{Binding JoinDiscordCommand}" Width="160" Height="40" VerticalAlignment="Center" Style="{DynamicResource DrawOutlineGhostButton}"/>
                     </Grid>
                 </Border>
 
@@ -177,17 +290,17 @@
         </ScrollViewer>
 
         <!-- Save Footer -->
-        <Border Grid.Row="2" Background="{DynamicResource SurfaceBase}" Margin="-48,24,-48,-40" Padding="48,20">
-            <Border.Effect>
-                <DropShadowEffect Color="#000000" BlurRadius="20" Opacity="0.2" ShadowDepth="-4"/>
-            </Border.Effect>
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceBase}" BorderBrush="{DynamicResource SurfaceHover}" BorderThickness="0,1,0,0" Margin="-48,24,-48,-40" Padding="48,20">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" FontWeight="Medium" FontSize="14"/>
-                <Button Grid.Column="1" Content="Save Changes" Command="{Binding SaveCommand}" Width="160" Height="44"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="What's New" Command="{Binding ShowWhatsNewCommand}" Margin="0,0,16,0" Padding="20,10" Style="{DynamicResource DrawOutlineGhostButton}"/>
+                    <Button Content="Save Changes" Command="{Binding SaveCommand}" Width="160" Height="44" Style="{DynamicResource DrawOutlineButton}"/>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

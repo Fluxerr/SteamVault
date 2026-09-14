@@ -11,6 +11,7 @@ public class GameInfo
     public string ShortDescription { get; set; } = "";
     public string Type { get; set; } = "game";
     public bool IsFree { get; set; }
+    public decimal Price { get; set; }
     public List<string> Developers { get; set; } = new();
     public List<string> Publishers { get; set; } = new();
     public List<string> Genres { get; set; } = new();
@@ -58,6 +59,13 @@ public class DepotInfo : INotifyPropertyChanged
     {
         get => _depotId;
         set => SetProperty(ref _depotId, value);
+    }
+
+    private string _name = "";
+    public string Name
+    {
+        get => _name;
+        set => SetProperty(ref _name, value);
     }
 
     public string? DecryptionKey

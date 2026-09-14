@@ -12,6 +12,7 @@ public class MainViewModel : ViewModelBase
     public MyGamesViewModel MyGamesVM { get; }
     public DiscoverViewModel DiscoverVM { get; }
     public OnlineViewModel OnlineVM { get; }
+    public StatsViewModel StatsVM { get; }
 
     private ViewModelBase _currentView = null!;
     public ViewModelBase CurrentView
@@ -26,6 +27,7 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsSettingsActive));
                 OnPropertyChanged(nameof(IsDiscoverActive));
                 OnPropertyChanged(nameof(IsOnlineActive));
+                OnPropertyChanged(nameof(IsStatsActive));
             }
         }
     }
@@ -35,18 +37,18 @@ public class MainViewModel : ViewModelBase
     public bool IsSettingsActive => CurrentView == SettingsVM;
     public bool IsDiscoverActive => CurrentView == DiscoverVM;
     public bool IsOnlineActive => CurrentView == OnlineVM;
+    public bool IsStatsActive => CurrentView == StatsVM;
 
     public ICommand NavigateDashboardCommand { get; }
     public ICommand NavigateSettingsCommand { get; }
     public ICommand NavigateMyGamesCommand { get; }
     public ICommand NavigateDiscoverCommand { get; }
     public ICommand NavigateOnlineCommand { get; }
+    public ICommand NavigateStatsCommand { get; }
 
     public string GameCount => CountLuaFiles();
 
-    public string AutoUpdateStatus => _settingsService.Settings.AutoUpdateEnabled
-        ? "Auto-update: ON"
-        : "Auto-update: OFF";
+    public string AutoUpdateStatus => "Auto-update: Disabled";
 
     private string CountLuaFiles()
     {
@@ -74,12 +76,15 @@ public class MainViewModel : ViewModelBase
         GameSearchService searchService,
         ExportService exportService,
         OnlineFixService onlineFixService,
-        GameManagementService gameMgmtService)
+        GameManagementService gameMgmtService,
+        SteamVault.Services.LuaToolsApiClient apiClient,
+        AuthService authService,
+        ImportService importService)
     {
         _settingsService = settingsService;
 
         MyGamesVM = new MyGamesViewModel(settingsService, steamApi, depotKeyService, luaParser, downloadService, gameMgmtService);
-        DashboardVM = new DashboardViewModel(downloadService, searchService, steamApi, luaParser, settingsService, gameMgmtService, depotKeyService);
+        DashboardVM = new DashboardViewModel(downloadService, searchService, steamApi, luaParser, settingsService, gameMgmtService, depotKeyService, importService);
         DashboardVM.NavigateToLibrary = () => CurrentView = MyGamesVM;
         DashboardVM.NavigateToLibraryAndUpdate = () =>
         {
@@ -88,9 +93,18 @@ public class MainViewModel : ViewModelBase
         };
         SettingsVM = new SettingsViewModel(settingsService, depotKeyService, exportService);
         DiscoverVM = new DiscoverViewModel(steamApi, downloadService, searchService);
-        OnlineVM = new OnlineViewModel(settingsService, steamApi, luaParser, onlineFixService);
+        OnlineVM = new OnlineViewModel(settingsService, steamApi, luaParser, onlineFixService, apiClient, authService);
+        StatsVM = new StatsViewModel(settingsService, luaParser, steamApi, gameMgmtService);
 
-        CurrentView = DashboardVM; // Default view
+        if (!string.IsNullOrWhiteSpace(App.PendingFixZipPath))
+        {
+            CurrentView = OnlineVM;
+            _ = OnlineVM.ProcessPendingExtractionAsync();
+        }
+        else
+        {
+            CurrentView = DashboardVM; // Default view
+        }
 
         NavigateDashboardCommand = new RelayCommand(_ => CurrentView = DashboardVM);
         NavigateSettingsCommand = new RelayCommand(_ =>
@@ -107,6 +121,11 @@ public class MainViewModel : ViewModelBase
                 CurrentView = DiscoverVM;
         });
         NavigateOnlineCommand = new RelayCommand(_ => CurrentView = OnlineVM);
+        NavigateStatsCommand = new RelayCommand(_ => 
+        {
+            CurrentView = StatsVM;
+            _ = StatsVM.RefreshStatsAsync();
+        });
 
         // Listen for settings changes to update sidebar
         SettingsVM.PropertyChanged += (_, e) =>
@@ -125,3 +144,4 @@ public class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(AutoUpdateStatus));
     }
 }
+

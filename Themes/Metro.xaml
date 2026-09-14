@@ -1,0 +1,84 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ═══ Color Palette — Metro (Rich Teal Base, Purple/Pink Accents, Fluid Waves) ═══ -->
+    <Color x:Key="WindowBackgroundColor">#041a21</Color> <!-- Distinctly dark teal -->
+    <Color x:Key="SidebarBackgroundColor">#06232e</Color>
+    <Color x:Key="SurfaceBaseColor">#0a2f3d</Color> <!-- Rich teal -->
+    <Color x:Key="SurfaceRaisedColor">#114052</Color>
+    <Color x:Key="SurfaceHoverColor">#19546b</Color>
+    
+    <!-- Teal remains the base/background color, but the Accents are Purple/Pink -->
+    <Color x:Key="PrimaryAccentColor">#9D00FF</Color> <!-- Purple Accent -->
+    <Color x:Key="PrimaryAccentHoverColor">#FF00A6</Color> <!-- Pink Hover -->
+    <Color x:Key="PrimaryAccentMutedColor">#340b47</Color> <!-- Muted purple -->
+    <Color x:Key="PrimaryAccentGlowColor">#88FF00A6</Color> <!-- Pink glow -->
+    
+    <Color x:Key="SuccessColor">#00FF9D</Color>
+    <Color x:Key="WarningColor">#FFE600</Color>
+    <Color x:Key="ErrorColor">#FF0055</Color>
+    
+    <Color x:Key="TextColor">#E5F6FF</Color>
+    <Color x:Key="MutedTextColor">#89b9c9</Color>
+    <Color x:Key="DimTextColor">#548f99</Color>
+    
+    <Color x:Key="BorderColor">#164659</Color>
+
+    <!-- ═══ Solid Brushes ═══ -->
+    <SolidColorBrush x:Key="WindowBackground" Color="{StaticResource WindowBackgroundColor}" />
+    <SolidColorBrush x:Key="SidebarBackground" Color="{StaticResource SidebarBackgroundColor}" />
+    <SolidColorBrush x:Key="SurfaceBase" Color="{StaticResource SurfaceBaseColor}" />
+    <SolidColorBrush x:Key="SurfaceRaised" Color="{StaticResource SurfaceRaisedColor}" />
+    <SolidColorBrush x:Key="SurfaceHover" Color="{StaticResource SurfaceHoverColor}" />
+    
+    <SolidColorBrush x:Key="PrimaryAccent" Color="{StaticResource PrimaryAccentColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentHover" Color="{StaticResource PrimaryAccentHoverColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentMuted" Color="{StaticResource PrimaryAccentMutedColor}" />
+    <SolidColorBrush x:Key="PrimaryAccentGlow" Color="{StaticResource PrimaryAccentGlowColor}" />
+    
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+    
+    <SolidColorBrush x:Key="Text" Color="{StaticResource TextColor}" />
+    <SolidColorBrush x:Key="MutedText" Color="{StaticResource MutedTextColor}" />
+    <SolidColorBrush x:Key="DimText" Color="{StaticResource DimTextColor}" />
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="InputBackground" Color="{StaticResource SurfaceBaseColor}" />
+
+    <!-- ═══ Theme Decoration (Neon Crystal Mesh) ═══ -->
+    <DrawingBrush x:Key="ThemeTopBarDecoration" Stretch="Uniform" TileMode="Tile" Viewport="0,0,120,120" ViewportUnits="Absolute" Opacity="0.35">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing>
+                <GeometryDrawing.Pen>
+                    <!-- Increased thickness so it's very visible -->
+                    <Pen Thickness="3" StartLineCap="Round" EndLineCap="Round" LineJoin="Round">
+                        <Pen.Brush>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#00E5FF" Offset="0" />
+                                <GradientStop Color="#7000FF" Offset="0.25" />
+                                <GradientStop Color="#9D00FF" Offset="0.6" />
+                                <GradientStop Color="#FF00A6" Offset="1" />
+                            </LinearGradientBrush>
+                        </Pen.Brush>
+                    </Pen>
+                </GeometryDrawing.Pen>
+                <GeometryDrawing.Geometry>
+                    <!-- Dense Low-Poly / Crystal Wireframe Matrix -->
+                    <GeometryGroup>
+                        <!-- Main large diamond -->
+                        <PathGeometry Figures="M 60,10 L 110,60 L 60,110 L 10,60 Z" />
+                        <!-- Crossbeams -->
+                        <PathGeometry Figures="M 60,10 L 60,110" />
+                        <PathGeometry Figures="M 10,60 L 110,60" />
+                        <!-- Inner facets -->
+                        <PathGeometry Figures="M 60,35 L 85,60 L 60,85 L 35,60 Z" />
+                        <!-- Outer connecting mesh to tile seamlessly -->
+                        <PathGeometry Figures="M 0,0 L 10,60 M 120,0 L 110,60 M 0,120 L 10,60 M 120,120 L 110,60" />
+                        <PathGeometry Figures="M 60,10 L 30,0 M 60,10 L 90,0 M 60,110 L 30,120 M 60,110 L 90,120" />
+                    </GeometryGroup>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+</ResourceDictionary>

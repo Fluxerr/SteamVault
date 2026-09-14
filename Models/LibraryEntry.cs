@@ -101,6 +101,13 @@ public class LibraryEntry : INotifyPropertyChanged
         set { _isUpdating = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanUpdate)); }
     }
 
+    private bool _isSelectedForExport;
+    public bool IsSelectedForExport
+    {
+        get => _isSelectedForExport;
+        set { _isSelectedForExport = value; OnPropertyChanged(); }
+    }
+
     public bool CanUpdate => !IsUpdating;
 
     private double _updateProgress;
@@ -120,4 +127,5 @@ public class LibraryDepotInfo
     public string DepotId { get; set; } = "";
     public string? ManifestId { get; set; }
     public string? DecryptionKey { get; set; }
+    public long FileSize { get; set; }
 }

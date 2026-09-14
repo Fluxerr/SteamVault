@@ -37,3 +37,8 @@ x86/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Installer output & binaries
+Installer/Output/
+*.exe
+temp_info*.json

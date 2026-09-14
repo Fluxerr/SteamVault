@@ -3,6 +3,7 @@ using SteamVault.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Windows;
 using System.Windows.Input;
 using Application = System.Windows.Application;
@@ -44,7 +45,26 @@ public class MyGamesViewModel : ViewModelBase
         LaunchGameCommand = new RelayCommand(param => LaunchGame(param as LibraryEntry), _ => ShowGameDetail && _selectedGame?.IsInstalled == true);
         OpenInstallFolderCommand = new RelayCommand(param => OpenInstallFolder(param as LibraryEntry), _ => ShowGameDetail && _selectedGame?.IsInstalled == true);
         OpenLuaFolderCommand = new RelayCommand(param => OpenLuaFolder(param as LibraryEntry));
+
+        ToggleExportModeCommand = new RelayCommand(_ => IsExportMode = !IsExportMode);
+        SetViewModeCommand = new RelayCommand(param => { if (param is string v) ViewMode = v; });
+        SetSortModeCommand = new RelayCommand(param => { if (param is string s) SortMode = s; });
+        ExportSelectedCommand = new RelayCommand(async _ => await ExportSelectedGamesAsync(), _ => IsExportMode && _allGames.Any(g => g.IsSelectedForExport));
+        ExportSingleGameCommand = new RelayCommand(async param => 
+        {
+            if (param is LibraryEntry entry)
+            {
+                entry.IsSelectedForExport = true;
+                await ExportSelectedGamesAsync();
+            }
+        });
+
+        RestoreManifestsCommand = new RelayCommand(param => RestoreManifests(param as LibraryEntry ?? SelectedGame));
+        RestoreAllManifestsCommand = new RelayCommand(_ => RestoreAllManifests());
     }
+
+    public ICommand RestoreManifestsCommand { get; }
+    public ICommand RestoreAllManifestsCommand { get; }
 
     public ObservableCollection<LibraryEntry> Games { get; } = new();
 
@@ -52,12 +72,61 @@ public class MyGamesViewModel : ViewModelBase
     public string SearchQuery
     {
         get => _searchQuery;
+        set { if (SetProperty(ref _searchQuery, value)) ApplyFilter(); }
+    }
+
+    private string _sortMode = "Name";
+    public string SortMode
+    {
+        get => _sortMode;
+        set { if (SetProperty(ref _sortMode, value)) ApplyFilter(); }
+    }
+
+    private string _viewMode = "Grid";
+    public string ViewMode
+    {
+        get => _viewMode;
+        set => SetProperty(ref _viewMode, value);
+    }
+
+    private bool _isExportMode;
+    public bool IsExportMode
+    {
+        get => _isExportMode;
         set
         {
-            if (SetProperty(ref _searchQuery, value))
-                ApplyFilter();
+            SetProperty(ref _isExportMode, value);
+            if (!value) foreach (var g in _allGames) g.IsSelectedForExport = false;
+            UpdateExportCount();
         }
     }
+
+    private int _exportSelectedCount;
+    public int ExportSelectedCount
+    {
+        get => _exportSelectedCount;
+        set => SetProperty(ref _exportSelectedCount, value);
+    }
+
+    public void UpdateExportCount()
+    {
+        ExportSelectedCount = _allGames.Count(g => g.IsSelectedForExport);
+        CommandManager.InvalidateRequerySuggested();
+    }
+
+    private void OnLibraryEntryPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LibraryEntry.IsSelectedForExport))
+        {
+            UpdateExportCount();
+        }
+    }
+
+    public ICommand ToggleExportModeCommand { get; }
+    public ICommand ExportSelectedCommand { get; }
+    public ICommand ExportSingleGameCommand { get; }
+    public ICommand SetViewModeCommand { get; }
+    public ICommand SetSortModeCommand { get; }
 
     private bool _isScanning;
     public bool IsScanning
@@ -160,42 +229,48 @@ public class MyGamesViewModel : ViewModelBase
         IsScanning = true;
         StatusMessage = "Scanning Lua folder...";
         ShowGameDetail = false;
-        _allGames.Clear();
-        Games.Clear();
-        HasNoGames = false;
-        CanUpdateAll = false;
-
-        try
-        {
-            var luaPath = _settings.Settings.LuaOutputPath;
-            if (string.IsNullOrWhiteSpace(luaPath) || !Directory.Exists(luaPath))
+            foreach (var g in _allGames)
             {
-                StatusMessage = "Lua output folder not found. Check Settings.";
-                HasNoGames = true;
-                IsScanning = false;
-                return;
+                g.PropertyChanged -= OnLibraryEntryPropertyChanged;
             }
+            _allGames.Clear();
+            Games.Clear();
+            HasNoGames = false;
+            CanUpdateAll = false;
 
-            if (!_depotKeyService.IsLoaded)
-                await _depotKeyService.LoadAsync();
-
-            var localEntries = _luaParser.ScanLuaFolder(luaPath);
-
-            if (localEntries.Count == 0)
+            try
             {
-                StatusMessage = "No .lua files found in the Lua folder. Download some games first!";
-                HasNoGames = true;
-                IsScanning = false;
-                return;
-            }
+                var luaPath = _settings.Settings.LuaOutputPath;
+                if (string.IsNullOrWhiteSpace(luaPath) || !Directory.Exists(luaPath))
+                {
+                    StatusMessage = "Lua output folder not found. Check Settings.";
+                    HasNoGames = true;
+                    IsScanning = false;
+                    return;
+                }
 
-            foreach (var entry in localEntries)
-            {
-                entry.Status = "Checking...";
-                _allGames.Add(entry);
-            }
+                if (!_depotKeyService.IsLoaded)
+                    await _depotKeyService.LoadAsync();
 
-            ApplyFilter();
+                var localEntries = _luaParser.ScanLuaFolder(luaPath);
+
+                if (localEntries.Count == 0)
+                {
+                    StatusMessage = "No .lua files found in the Lua folder. Download some games first!";
+                    HasNoGames = true;
+                    IsScanning = false;
+                    return;
+                }
+
+                foreach (var entry in localEntries)
+                {
+                    entry.Status = "Checking...";
+                    entry.PropertyChanged += OnLibraryEntryPropertyChanged;
+                    _allGames.Add(entry);
+                }
+
+                ApplyFilter();
+                UpdateExportCount();
             StatusMessage = $"Found {localEntries.Count} game(s). Fetching details...";
             HasNoGames = _allGames.Count == 0;
 
@@ -257,25 +332,26 @@ public class MyGamesViewModel : ViewModelBase
 
     private void ApplyFilter()
     {
-        var currentQuery = SearchQuery.Trim();
-        if (string.IsNullOrEmpty(currentQuery))
-        {
-            Games.Clear();
-            foreach (var g in _allGames) Games.Add(g);
-            return;
-        }
-
-        var scoredList = new List<(LibraryEntry Entry, double Score)>();
-        foreach (var entry in _allGames)
-        {
-            double score = entry.AppId.Contains(currentQuery) ? 100
-                : GameSearchService.CalculateFuzzyScore(currentQuery, entry.Name);
-            if (score > 15) scoredList.Add((entry, score));
-        }
-
         Games.Clear();
-        foreach (var item in scoredList.OrderByDescending(x => x.Score))
-            Games.Add(item.Entry);
+        IEnumerable<LibraryEntry> query = _allGames;
+
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            var sq = SearchQuery.ToLowerInvariant();
+            query = query.Where(g => g.Name.ToLowerInvariant().Contains(sq) || g.AppId.Contains(sq));
+        }
+
+        query = SortMode switch
+        {
+            "LastUpdated" => query.OrderByDescending(g => g.LastUpdated),
+            "Size" => query.OrderByDescending(g => g.Depots.Sum(d => d.FileSize)),
+            _ => query.OrderBy(g => g.Name)
+        };
+
+        foreach (var game in query)
+        {
+            Games.Add(game);
+        }
     }
 
     private async Task CheckForUpdatesAsync(LibraryEntry entry)
@@ -314,9 +390,10 @@ public class MyGamesViewModel : ViewModelBase
             Application.Current.Dispatcher.Invoke(() =>
                 entry.Status = anyOutdated ? "Update Available" : "Up to Date");
         }
-        catch
+        catch (Exception ex)
         {
-            Application.Current.Dispatcher.Invoke(() => entry.Status = "Up to Date");
+            System.Diagnostics.Debug.WriteLine($"Update check failed for {entry.AppId}: {ex.Message}");
+            Application.Current.Dispatcher.Invoke(() => entry.Status = "Check Failed");
         }
     }
 
@@ -332,12 +409,19 @@ public class MyGamesViewModel : ViewModelBase
         }
         else
         {
-            var dlcChoice = System.Windows.MessageBox.Show(
-                "Do you want to include all available DLCs for this game?",
-                "Include DLCs?",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Question);
-            includeDlcs = dlcChoice == System.Windows.MessageBoxResult.Yes;
+            var dialog = new SteamVault.Views.ModernDialogWindow(
+                "Do you want to include all available DLCs in this config?", 
+                "Include DLCs?");
+            dialog.Owner = System.Windows.Application.Current.MainWindow;
+            
+            var blur = new System.Windows.Media.Effects.BlurEffect { Radius = 8 };
+            System.Windows.Application.Current.MainWindow.Effect = blur;
+            
+            var dlcChoice = dialog.ShowDialog();
+            
+            System.Windows.Application.Current.MainWindow.Effect = null;
+            
+            includeDlcs = dlcChoice == true;
         }
 
         entry.IsUpdating = true; entry.UpdateProgress = 0;
@@ -378,12 +462,19 @@ public class MyGamesViewModel : ViewModelBase
         IsUpdatingAll = true;
         StatusMessage = $"Starting batch update for {gamesToUpdate.Count} game(s)...";
         // Prompt once for all games
-        var dlcChoice = System.Windows.MessageBox.Show(
-            "Do you want to include all available DLCs for these games?",
-            "Include DLCs?",
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Question);
-        bool includeDlcs = dlcChoice == System.Windows.MessageBoxResult.Yes;
+        var dialog = new SteamVault.Views.ModernDialogWindow(
+            "Do you want to include all available DLCs?", 
+            "Include DLCs?");
+        dialog.Owner = System.Windows.Application.Current.MainWindow;
+
+        var blur = new System.Windows.Media.Effects.BlurEffect { Radius = 8 };
+        System.Windows.Application.Current.MainWindow.Effect = blur;
+
+        var dlcChoice = dialog.ShowDialog();
+        
+        System.Windows.Application.Current.MainWindow.Effect = null;
+
+        bool includeDlcs = dlcChoice == true;
 
         try
         {
@@ -457,9 +548,11 @@ public class MyGamesViewModel : ViewModelBase
             _gameMgmt.DeleteLuaFile(entry.AppId);
 
             // Remove from lists
+            entry.PropertyChanged -= OnLibraryEntryPropertyChanged;
             _allGames.Remove(entry);
             Games.Remove(entry);
             ShowGameDetail = false;
+            UpdateExportCount();
 
             HasNoGames = _allGames.Count == 0;
             StatusMessage = $"✓ {entry.Name} deleted successfully.";
@@ -490,5 +583,105 @@ public class MyGamesViewModel : ViewModelBase
         var dir = Path.GetDirectoryName(entry.LuaFilePath);
         if (dir != null && Directory.Exists(dir))
             Process.Start(new ProcessStartInfo { FileName = dir, UseShellExecute = true });
+    }
+
+    private Task ExportSelectedGamesAsync()
+    {
+        var toExport = _allGames.Where(g => g.IsSelectedForExport).ToList();
+        if (toExport.Count == 0) return Task.CompletedTask;
+
+        StatusMessage = $"Exporting {toExport.Count} configurations...";
+
+        try
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Export Configurations",
+                Filter = "ZIP Archive (*.zip)|*.zip",
+                FileName = $"SteamVault_Export_{DateTime.Now:yyyyMMdd_HHmmss}.zip",
+                DefaultExt = ".zip"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                StatusMessage = "Export cancelled.";
+                return Task.CompletedTask;
+            }
+
+            string tempDir = Path.Combine(Path.GetTempPath(), "SteamVault_Export_" + Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+
+            int count = 0;
+            foreach (var g in toExport)
+            {
+                if (File.Exists(g.LuaFilePath))
+                {
+                    string destPath = Path.Combine(tempDir, Path.GetFileName(g.LuaFilePath));
+                    File.Copy(g.LuaFilePath, destPath, true);
+                    count++;
+                }
+            }
+
+            if (count > 0)
+            {
+                if (File.Exists(dialog.FileName)) File.Delete(dialog.FileName);
+                ZipFile.CreateFromDirectory(tempDir, dialog.FileName);
+                StatusMessage = $"Successfully exported {count} configs to {Path.GetFileName(dialog.FileName)}";
+            }
+            else
+            {
+                StatusMessage = "No Lua files found for the selected games.";
+            }
+
+            Directory.Delete(tempDir, true);
+
+            foreach (var g in toExport) g.IsSelectedForExport = false;
+            IsExportMode = false;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Export failed: {ex.Message}";
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    private void RestoreManifests(LibraryEntry? entry)
+    {
+        if (entry == null) return;
+        var count = _downloadService.RestoreManifestsForApp(entry.AppId);
+        if (count > 0)
+        {
+            StatusMessage = $"Restored {count} manifest(s) for '{entry.Name}' into Steam depotcache.";
+            System.Windows.MessageBox.Show(
+                $"Successfully restored {count} manifest file(s) for '{entry.Name}' to Steam's depotcache directories.\n\nAll files have been set to Read-Only to prevent Steam from deleting them on restart.",
+                "Manifests Re-applied", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            StatusMessage = $"No cached manifests found for '{entry.Name}'.";
+            System.Windows.MessageBox.Show(
+                $"No cached manifests found in local vault for '{entry.Name}'. You can re-download them using the 'Update' button.",
+                "No Manifests Cached", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void RestoreAllManifests()
+    {
+        var total = _downloadService.RestoreAllVaultManifests();
+        if (total > 0)
+        {
+            StatusMessage = $"Restored {total} manifest(s) across all games into Steam depotcache.";
+            System.Windows.MessageBox.Show(
+                $"Successfully restored {total} manifest file(s) across all games into Steam's depotcache directories.\n\nAll files have been locked (Read-Only) to prevent Steam from wiping them on restart.",
+                "All Manifests Re-applied", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            StatusMessage = "No cached manifests found in local vault.";
+            System.Windows.MessageBox.Show(
+                "No cached manifests found in local vault to restore.",
+                "No Manifests Cached", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 }

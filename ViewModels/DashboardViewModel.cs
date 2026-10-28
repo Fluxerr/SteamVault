@@ -226,6 +226,106 @@ public class DashboardViewModel : ViewModelBase
         set => SetProperty(ref _showMultiplayerWarning, value);
     }
 
+    // Hardware & Compatibility Properties
+    private string _compatibilityRating = "";
+    public string CompatibilityRating
+    {
+        get => _compatibilityRating;
+        set => SetProperty(ref _compatibilityRating, value);
+    }
+
+    private string _compatibilityBadgeColor = "#4CAF50";
+    public string CompatibilityBadgeColor
+    {
+        get => _compatibilityBadgeColor;
+        set => SetProperty(ref _compatibilityBadgeColor, value);
+    }
+
+    private string _compatibilityText = "";
+    public string CompatibilityText
+    {
+        get => _compatibilityText;
+        set => SetProperty(ref _compatibilityText, value);
+    }
+
+    private string _userCpuName = "";
+    public string UserCpuName
+    {
+        get => _userCpuName;
+        set => SetProperty(ref _userCpuName, value);
+    }
+
+    private string _userGpuName = "";
+    public string UserGpuName
+    {
+        get => _userGpuName;
+        set => SetProperty(ref _userGpuName, value);
+    }
+
+    private string _userRamText = "";
+    public string UserRamText
+    {
+        get => _userRamText;
+        set => SetProperty(ref _userRamText, value);
+    }
+
+    private string _gameReqRam = "";
+    public string GameReqRam
+    {
+        get => _gameReqRam;
+        set => SetProperty(ref _gameReqRam, value);
+    }
+
+    private string _gameReqCpu = "";
+    public string GameReqCpu
+    {
+        get => _gameReqCpu;
+        set => SetProperty(ref _gameReqCpu, value);
+    }
+
+    private string _gameReqGpu = "";
+    public string GameReqGpu
+    {
+        get => _gameReqGpu;
+        set => SetProperty(ref _gameReqGpu, value);
+    }
+
+    private bool _hasCompatibilityData;
+    public bool HasCompatibilityData
+    {
+        get => _hasCompatibilityData;
+        set => SetProperty(ref _hasCompatibilityData, value);
+    }
+
+    // HowLongToBeat Properties
+    private string _hltbMainStory = "--";
+    public string HltbMainStory
+    {
+        get => _hltbMainStory;
+        set => SetProperty(ref _hltbMainStory, value);
+    }
+
+    private string _hltbMainExtra = "--";
+    public string HltbMainExtra
+    {
+        get => _hltbMainExtra;
+        set => SetProperty(ref _hltbMainExtra, value);
+    }
+
+    private string _hltbCompletionist = "--";
+    public string HltbCompletionist
+    {
+        get => _hltbCompletionist;
+        set => SetProperty(ref _hltbCompletionist, value);
+    }
+
+    private bool _hasHltbData;
+    public bool HasHltbData
+    {
+        get => _hasHltbData;
+        set => SetProperty(ref _hasHltbData, value);
+    }
+
     private string? _resultSummary;
     public string? ResultSummary
     {
@@ -404,6 +504,28 @@ public class DashboardViewModel : ViewModelBase
                             GameType = gameInfo.Type;
                             GameReleaseDate = gameInfo.ReleaseDate;
                             ShowMultiplayerWarning = gameInfo.HasMultiplayerCategories;
+
+                            if (gameInfo.Compatibility != null)
+                            {
+                                CompatibilityRating = gameInfo.Compatibility.Rating;
+                                CompatibilityBadgeColor = gameInfo.Compatibility.BadgeColor;
+                                CompatibilityText = gameInfo.Compatibility.RecommendationText;
+                                UserCpuName = gameInfo.Compatibility.UserCpuName;
+                                UserGpuName = gameInfo.Compatibility.UserGpuName;
+                                UserRamText = gameInfo.Compatibility.UserRamText;
+                                GameReqRam = gameInfo.Compatibility.GameReqRam;
+                                GameReqCpu = gameInfo.Compatibility.GameReqCpu;
+                                GameReqGpu = gameInfo.Compatibility.GameReqGpu;
+                                HasCompatibilityData = true;
+                            }
+
+                            if (gameInfo.HltbData != null && gameInfo.HltbData.HasData)
+                            {
+                                HltbMainStory = gameInfo.HltbData.MainStoryTime;
+                                HltbMainExtra = gameInfo.HltbData.MainExtraTime;
+                                HltbCompletionist = gameInfo.HltbData.CompletionistTime;
+                                HasHltbData = true;
+                            }
 
                             // Compute estimated size
                             var totalBytes = gameInfo.Depots?.Sum(d => d.SizeBytes) ?? 0;
@@ -688,6 +810,28 @@ public class DashboardViewModel : ViewModelBase
                     GameReleaseDate = result.Game?.ReleaseDate;
                     _lastLuaFilePath = result.LuaFilePath;
                     ShowMultiplayerWarning = result.Game?.HasMultiplayerCategories ?? false;
+
+                    if (result.Game?.Compatibility != null)
+                    {
+                        CompatibilityRating = result.Game.Compatibility.Rating;
+                        CompatibilityBadgeColor = result.Game.Compatibility.BadgeColor;
+                        CompatibilityText = result.Game.Compatibility.RecommendationText;
+                        UserCpuName = result.Game.Compatibility.UserCpuName;
+                        UserGpuName = result.Game.Compatibility.UserGpuName;
+                        UserRamText = result.Game.Compatibility.UserRamText;
+                        GameReqRam = result.Game.Compatibility.GameReqRam;
+                        GameReqCpu = result.Game.Compatibility.GameReqCpu;
+                        GameReqGpu = result.Game.Compatibility.GameReqGpu;
+                        HasCompatibilityData = true;
+                    }
+
+                    if (result.Game?.HltbData != null && result.Game.HltbData.HasData)
+                    {
+                        HltbMainStory = result.Game.HltbData.MainStoryTime;
+                        HltbMainExtra = result.Game.HltbData.MainExtraTime;
+                        HltbCompletionist = result.Game.HltbData.CompletionistTime;
+                        HasHltbData = true;
+                    }
 
                     // Add to search history
                     if (!string.IsNullOrWhiteSpace(GameName))

@@ -377,10 +377,105 @@
                                 </Border>
                             </WrapPanel>
 
-                            <TextBlock Text="{Binding DetailDescription}" TextWrapping="Wrap" FontSize="14" LineHeight="24" Foreground="{DynamicResource MutedText}" Margin="0,0,0,32"/>
+                            <TextBlock Text="{Binding DetailDescription}" TextWrapping="Wrap" FontSize="14" LineHeight="24" Foreground="{DynamicResource MutedText}" Margin="0,0,0,24"/>
+
+                            <!-- System Compatibility Badge -->
+                            <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,16" Background="{DynamicResource SurfaceHover}"
+                                    Visibility="{Binding DetailHasCompatibilityData, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Border Background="{Binding DetailCompatibilityBadgeColor}" CornerRadius="4" Padding="8,3" Margin="0,0,12,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DetailCompatibilityRating, StringFormat='COMPATIBILITY: {0}'}" 
+                                                       Foreground="White" FontWeight="Bold" FontSize="11"/>
+                                        </Border>
+                                        <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,8,0" VerticalAlignment="Center" FontSize="14"/>
+                                        <TextBlock Text="{Binding DetailCompatibilityText}" Foreground="{DynamicResource MutedText}" FontSize="12" VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <!-- Requirements vs Your System Comparison Table -->
+                                    <Border Background="{DynamicResource SurfaceBase}" CornerRadius="6" Padding="12,10" Margin="0,4,0,0">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="1"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="55"/>
+                                                <ColumnDefinition Width="1*"/>
+                                                <ColumnDefinition Width="1*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Table Header -->
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="SPEC" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource DimText}"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" Text="GAME REQUIREMENTS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource PrimaryAccent}"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="2" Text="YOUR SYSTEM SPECS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"/>
+
+                                            <Border Grid.Row="1" Grid.ColumnSpan="3" Background="{DynamicResource SurfaceHover}" Margin="0,6,0,8"/>
+
+                                            <!-- RAM Row -->
+                                            <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,2,0,6">
+                                                <TextBlock Text="&#xE8B9;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,4,0" FontSize="11" VerticalAlignment="Center"/>
+                                                <TextBlock Text="RAM" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Text}"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DetailGameReqRam}" FontSize="11" Foreground="{DynamicResource MutedText}" VerticalAlignment="Top" Margin="0,2,10,6" TextWrapping="Wrap"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding DetailUserRamText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Text}" VerticalAlignment="Top" Margin="0,2,0,6" TextWrapping="Wrap"/>
+
+                                            <!-- CPU Row -->
+                                            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,2,0,6">
+                                                <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,4,0" FontSize="11" VerticalAlignment="Center"/>
+                                                <TextBlock Text="CPU" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Text}"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DetailGameReqCpu}" FontSize="11" Foreground="{DynamicResource MutedText}" VerticalAlignment="Top" Margin="0,2,10,6" TextWrapping="Wrap"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding DetailUserCpuName}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Text}" VerticalAlignment="Top" Margin="0,2,0,6" TextWrapping="Wrap"/>
+
+                                            <!-- GPU Row -->
+                                            <StackPanel Grid.Row="4" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,2,0,0">
+                                                <TextBlock Text="&#xE7F4;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,4,0" FontSize="11" VerticalAlignment="Center"/>
+                                                <TextBlock Text="GPU" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Text}"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DetailGameReqGpu}" FontSize="11" Foreground="{DynamicResource MutedText}" VerticalAlignment="Top" Margin="0,2,10,0" TextWrapping="Wrap"/>
+                                            <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding DetailUserGpuName}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Text}" VerticalAlignment="Top" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- HowLongToBeat Stats Grid -->
+                            <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,24" Background="{DynamicResource SurfaceHover}"
+                                    Visibility="{Binding DetailHasHltbData, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="&#xE81C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,8,0" VerticalAlignment="Center" FontSize="13"/>
+                                        <TextBlock Text="HOW LONG TO BEAT" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource PrimaryAccent}"/>
+                                    </StackPanel>
+                                    <WrapPanel>
+                                        <Border Background="{DynamicResource SurfaceBase}" CornerRadius="6" Padding="10,6" Margin="0,0,10,6">
+                                            <StackPanel>
+                                                <TextBlock Text="Main Story" FontSize="10" Foreground="{DynamicResource DimText}"/>
+                                                <TextBlock Text="{Binding DetailHltbMainStory}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Text}"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Background="{DynamicResource SurfaceBase}" CornerRadius="6" Padding="10,6" Margin="0,0,10,6">
+                                            <StackPanel>
+                                                <TextBlock Text="Main + Extra" FontSize="10" Foreground="{DynamicResource DimText}"/>
+                                                <TextBlock Text="{Binding DetailHltbMainExtra}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Text}"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Background="{DynamicResource SurfaceBase}" CornerRadius="6" Padding="10,6" Margin="0,0,10,6">
+                                            <StackPanel>
+                                                <TextBlock Text="Completionist" FontSize="10" Foreground="{DynamicResource DimText}"/>
+                                                <TextBlock Text="{Binding DetailHltbCompletionist}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Text}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
 
                             <!-- Stats -->
-                            <StackPanel Visibility="{Binding DetailHasStats, Converter={StaticResource BoolToVis}}" Orientation="Horizontal">
+                            <StackPanel Visibility="{Binding DetailHasStats, Converter={StaticResource BoolToVis}}" Orientation="Horizontal" Margin="0,0,0,24">
                                 <StackPanel Orientation="Horizontal" Margin="0,0,32,0">
                                     <TextBlock Text="&#xE716;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding DetailPlayerCount}" FontSize="13" Foreground="{DynamicResource MutedText}" VerticalAlignment="Center"/>

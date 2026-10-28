@@ -155,6 +155,50 @@ public class DiscoverViewModel : ViewModelBase
     private bool _detailShowMultiplayerWarning;
     public bool DetailShowMultiplayerWarning { get => _detailShowMultiplayerWarning; set => SetProperty(ref _detailShowMultiplayerWarning, value); }
 
+    // Hardware & Compatibility Properties for Discover Details
+    private string _detailCompatibilityRating = "";
+    public string DetailCompatibilityRating { get => _detailCompatibilityRating; set => SetProperty(ref _detailCompatibilityRating, value); }
+
+    private string _detailCompatibilityBadgeColor = "#34D399";
+    public string DetailCompatibilityBadgeColor { get => _detailCompatibilityBadgeColor; set => SetProperty(ref _detailCompatibilityBadgeColor, value); }
+
+    private string _detailCompatibilityText = "";
+    public string DetailCompatibilityText { get => _detailCompatibilityText; set => SetProperty(ref _detailCompatibilityText, value); }
+
+    private string _detailUserCpuName = "";
+    public string DetailUserCpuName { get => _detailUserCpuName; set => SetProperty(ref _detailUserCpuName, value); }
+
+    private string _detailUserGpuName = "";
+    public string DetailUserGpuName { get => _detailUserGpuName; set => SetProperty(ref _detailUserGpuName, value); }
+
+    private string _detailUserRamText = "";
+    public string DetailUserRamText { get => _detailUserRamText; set => SetProperty(ref _detailUserRamText, value); }
+
+    private string _detailGameReqRam = "";
+    public string DetailGameReqRam { get => _detailGameReqRam; set => SetProperty(ref _detailGameReqRam, value); }
+
+    private string _detailGameReqCpu = "";
+    public string DetailGameReqCpu { get => _detailGameReqCpu; set => SetProperty(ref _detailGameReqCpu, value); }
+
+    private string _detailGameReqGpu = "";
+    public string DetailGameReqGpu { get => _detailGameReqGpu; set => SetProperty(ref _detailGameReqGpu, value); }
+
+    private bool _detailHasCompatibilityData;
+    public bool DetailHasCompatibilityData { get => _detailHasCompatibilityData; set => SetProperty(ref _detailHasCompatibilityData, value); }
+
+    // HowLongToBeat Properties for Discover Details
+    private string _detailHltbMainStory = "--";
+    public string DetailHltbMainStory { get => _detailHltbMainStory; set => SetProperty(ref _detailHltbMainStory, value); }
+
+    private string _detailHltbMainExtra = "--";
+    public string DetailHltbMainExtra { get => _detailHltbMainExtra; set => SetProperty(ref _detailHltbMainExtra, value); }
+
+    private string _detailHltbCompletionist = "--";
+    public string DetailHltbCompletionist { get => _detailHltbCompletionist; set => SetProperty(ref _detailHltbCompletionist, value); }
+
+    private bool _detailHasHltbData;
+    public bool DetailHasHltbData { get => _detailHasHltbData; set => SetProperty(ref _detailHasHltbData, value); }
+
     private string _detailStatusMessage = "";
     public string DetailStatusMessage { get => _detailStatusMessage; set => SetProperty(ref _detailStatusMessage, value); }
 
@@ -177,7 +221,7 @@ public class DiscoverViewModel : ViewModelBase
         try
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            http.DefaultRequestHeaders.Add("User-Agent", "SteamVault/2.0");
+            http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36");
             var json = Newtonsoft.Json.Linq.JObject.Parse(
                 await http.GetStringAsync("https://store.steampowered.com/api/featuredcategories?l=english&cc=US"));
 
@@ -257,6 +301,8 @@ public class DiscoverViewModel : ViewModelBase
         DetailPlayerCount = "";
         DetailReviewScore = "";
         DetailHasStats = false;
+        DetailHasCompatibilityData = false;
+        DetailHasHltbData = false;
         DetailStatusMessage = $"Loading details for {result.Name}...";
         DetailProgress = 0;
         IsDownloadComplete = false;
@@ -275,6 +321,28 @@ public class DiscoverViewModel : ViewModelBase
                 DetailType = gameInfo.Type;
                 DetailReleaseDate = gameInfo.ReleaseDate;
                 DetailShowMultiplayerWarning = gameInfo.HasMultiplayerCategories;
+
+                if (gameInfo.Compatibility != null)
+                {
+                    DetailCompatibilityRating = gameInfo.Compatibility.Rating;
+                    DetailCompatibilityBadgeColor = gameInfo.Compatibility.BadgeColor;
+                    DetailCompatibilityText = gameInfo.Compatibility.RecommendationText;
+                    DetailUserCpuName = gameInfo.Compatibility.UserCpuName;
+                    DetailUserGpuName = gameInfo.Compatibility.UserGpuName;
+                    DetailUserRamText = gameInfo.Compatibility.UserRamText;
+                    DetailGameReqRam = gameInfo.Compatibility.GameReqRam;
+                    DetailGameReqCpu = gameInfo.Compatibility.GameReqCpu;
+                    DetailGameReqGpu = gameInfo.Compatibility.GameReqGpu;
+                    DetailHasCompatibilityData = true;
+                }
+
+                if (gameInfo.HltbData != null && gameInfo.HltbData.HasData)
+                {
+                    DetailHltbMainStory = gameInfo.HltbData.MainStoryTime;
+                    DetailHltbMainExtra = gameInfo.HltbData.MainExtraTime;
+                    DetailHltbCompletionist = gameInfo.HltbData.CompletionistTime;
+                    DetailHasHltbData = true;
+                }
             }
             if (stats != null)
             {

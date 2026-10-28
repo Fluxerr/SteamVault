@@ -19,11 +19,28 @@ public class InstallationViewModel : ViewModelBase
         _settingsService = settingsService;
         _installer = new OpenSteamToolInstaller();
 
+        if (!string.IsNullOrWhiteSpace(_settingsService.Settings.Username))
+        {
+            _username = _settingsService.Settings.Username;
+        }
+        else
+        {
+            _username = string.IsNullOrWhiteSpace(Environment.UserName) ? "VaultUser" : Environment.UserName;
+        }
+
         DetectSteamDirectory();
         
         BrowseCommand = new RelayCommand(_ => BrowseSteamDirectory());
         ConfirmCommand = new RelayCommand(_ => ConfirmAndInstall());
         RetryAsAdminCommand = new RelayCommand(_ => RetryAsAdmin());
+        FinishSetupCommand = new RelayCommand(_ => FinishSetup());
+    }
+
+    private string _username = "VaultUser";
+    public string Username
+    {
+        get => _username;
+        set => SetProperty(ref _username, value);
     }
 
     private string _steamDirectory = "";
@@ -120,6 +137,7 @@ public class InstallationViewModel : ViewModelBase
     public ICommand BrowseCommand { get; }
     public ICommand ConfirmCommand { get; }
     public ICommand RetryAsAdminCommand { get; }
+    public ICommand FinishSetupCommand { get; }
 
     private void DetectSteamDirectory()
     {
@@ -287,25 +305,34 @@ public class InstallationViewModel : ViewModelBase
     {
         _settingsService.Settings.SteamDirectory = SteamDirectory;
         _settingsService.Settings.LuaOutputPath = Path.Combine(SteamDirectory, "config", "lua");
+        if (!string.IsNullOrWhiteSpace(Username))
+        {
+            _settingsService.Settings.Username = Username.Trim();
+        }
 
         _settingsService.Settings.IsInstalled = true;
         _settingsService.Save();
 
         if (alreadyHad)
-            StatusMessage = "OpenSteamTool is already installed — you're all set!";
+            StatusMessage = "OpenSteamTool is already installed — set your Family username to finish.";
         else
             StatusMessage = $"OpenSteamTool installed successfully! ({dllsCopied} DLLs, {dirsCreated} directories)";
 
         StatusIcon = "\u2705";
         IsComplete = true;
-        
-        Task.Delay(1500).ContinueWith(_ =>
+    }
+
+    private void FinishSetup()
+    {
+        if (string.IsNullOrWhiteSpace(Username))
         {
-            WpfApp.Current.Dispatcher.Invoke(() =>
-            {
-                OnInstallationComplete?.Invoke();
-            });
-        });
+            Username = "VaultUser";
+        }
+
+        _settingsService.Settings.Username = Username.Trim();
+        _settingsService.Save();
+
+        OnInstallationComplete?.Invoke();
     }
 
     public void RetryAsAdmin()

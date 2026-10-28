@@ -143,21 +143,39 @@
             </ScrollViewer>
         </Grid>
 
-        <!-- Installation Complete Overlay -->
+        <!-- Installation Complete Overlay / Profile Setup -->
         <Grid Visibility="{Binding IsComplete, Converter={StaticResource InvertBoolConverter}}">
             <Grid.Background>
-                <SolidColorBrush Color="{DynamicResource WindowBackgroundColor}" Opacity="0.95"/>
+                <SolidColorBrush Color="{DynamicResource WindowBackgroundColor}" Opacity="0.96"/>
             </Grid.Background>
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Style="{DynamicResource FadeInElement}">
-                <Border Width="100" Height="100" CornerRadius="50" Background="{DynamicResource SuccessBrush}" Margin="0,0,0,32" HorizontalAlignment="Center">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="500" Width="480" Style="{DynamicResource FadeInElement}">
+                <Border Width="80" Height="80" CornerRadius="40" Background="{DynamicResource SuccessBrush}" Margin="0,0,0,24" HorizontalAlignment="Center">
                     <Border.Effect>
-                        <DropShadowEffect Color="{DynamicResource SuccessColor}" BlurRadius="30" Opacity="0.4" ShadowDepth="0"/>
+                        <DropShadowEffect Color="{DynamicResource SuccessColor}" BlurRadius="25" Opacity="0.4" ShadowDepth="0"/>
                     </Border.Effect>
-                    <TextBlock Text="&#xE73E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="40" Foreground="#064E3B" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="36" Foreground="#064E3B" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
-                <TextBlock Text="Installation Complete!" Style="{DynamicResource TitleText}" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                <TextBlock Text="{Binding StatusMessage}" FontSize="16" Foreground="{DynamicResource MutedText}" HorizontalAlignment="Center" Margin="0,0,0,16"/>
-                <TextBlock Text="Launching SteamVault..." FontSize="15" Foreground="{DynamicResource DimText}" HorizontalAlignment="Center" FontStyle="Italic"/>
+                
+                <TextBlock Text="Setup Completed!" Style="{DynamicResource TitleText}" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <TextBlock Text="{Binding StatusMessage}" FontSize="14" Foreground="{DynamicResource MutedText}" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,24"/>
+
+                <!-- Username Card -->
+                <Border CornerRadius="16" Padding="28,24" Background="{DynamicResource SurfaceBase}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,24">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <TextBlock Text="&#xE77B;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="18" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Set Your Family Profile Name" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource Text}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="This username is attached to your account and shown to members when sharing games in Family pools. You can change this anytime in Settings." 
+                                   FontSize="13" Foreground="{DynamicResource DimText}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                        <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" 
+                                 Height="46" VerticalContentAlignment="Center" Padding="14,0" 
+                                 FontSize="15" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+
+                <Button Content="Get Started with SteamVault" Command="{Binding FinishSetupCommand}" Height="50" FontSize="16" FontWeight="SemiBold"/>
             </StackPanel>
         </Grid>
     </Grid>

@@ -10,7 +10,7 @@ namespace SteamVault.ViewModels;
 
 public class WhatsNewViewModel : INotifyPropertyChanged
 {
-    private string _version = "2.6.0";
+    private string _version = "2.6.1";
     public string Version
     {
         get => _version;

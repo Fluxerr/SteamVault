@@ -13,6 +13,7 @@ public class MainViewModel : ViewModelBase
     public DiscoverViewModel DiscoverVM { get; }
     public OnlineViewModel OnlineVM { get; }
     public StatsViewModel StatsVM { get; }
+    public FamilyVaultViewModel FamilyVaultVM { get; }
 
     private ViewModelBase _currentView = null!;
     public ViewModelBase CurrentView
@@ -28,6 +29,7 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsDiscoverActive));
                 OnPropertyChanged(nameof(IsOnlineActive));
                 OnPropertyChanged(nameof(IsStatsActive));
+                OnPropertyChanged(nameof(IsFamilyActive));
             }
         }
     }
@@ -38,6 +40,7 @@ public class MainViewModel : ViewModelBase
     public bool IsDiscoverActive => CurrentView == DiscoverVM;
     public bool IsOnlineActive => CurrentView == OnlineVM;
     public bool IsStatsActive => CurrentView == StatsVM;
+    public bool IsFamilyActive => CurrentView == FamilyVaultVM;
 
     public ICommand NavigateDashboardCommand { get; }
     public ICommand NavigateSettingsCommand { get; }
@@ -45,6 +48,7 @@ public class MainViewModel : ViewModelBase
     public ICommand NavigateDiscoverCommand { get; }
     public ICommand NavigateOnlineCommand { get; }
     public ICommand NavigateStatsCommand { get; }
+    public ICommand NavigateFamilyCommand { get; }
 
     public string GameCount => CountLuaFiles();
 
@@ -79,7 +83,8 @@ public class MainViewModel : ViewModelBase
         GameManagementService gameMgmtService,
         SteamVault.Services.LuaToolsApiClient apiClient,
         AuthService authService,
-        ImportService importService)
+        ImportService importService,
+        FamilyVaultService familyService)
     {
         _settingsService = settingsService;
 
@@ -95,6 +100,7 @@ public class MainViewModel : ViewModelBase
         DiscoverVM = new DiscoverViewModel(steamApi, downloadService, searchService);
         OnlineVM = new OnlineViewModel(settingsService, steamApi, luaParser, onlineFixService, apiClient, authService);
         StatsVM = new StatsViewModel(settingsService, luaParser, steamApi, gameMgmtService);
+        FamilyVaultVM = new FamilyVaultViewModel(familyService, settingsService, steamApi, searchService);
 
         if (!string.IsNullOrWhiteSpace(App.PendingFixZipPath))
         {
@@ -126,6 +132,7 @@ public class MainViewModel : ViewModelBase
             CurrentView = StatsVM;
             _ = StatsVM.RefreshStatsAsync();
         });
+        NavigateFamilyCommand = new RelayCommand(_ => CurrentView = FamilyVaultVM);
 
         // Listen for settings changes to update sidebar
         SettingsVM.PropertyChanged += (_, e) =>
@@ -142,6 +149,46 @@ public class MainViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(GameCount));
         OnPropertyChanged(nameof(AutoUpdateStatus));
+    }
+
+    public void HandleDeepLink(string url)
+    {
+        // Example URL: steamvault://download/4001890
+        // Or: steamvault://join/ff8081819543e33f01954b868e4c7717
+        try
+        {
+            var uri = new System.Uri(url);
+            if (uri.Scheme.Equals("steamvault", System.StringComparison.OrdinalIgnoreCase))
+            {
+                if (uri.Host.Equals("download", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var appId = uri.Segments.LastOrDefault()?.Trim('/');
+                    if (uint.TryParse(appId, out uint parsedAppId))
+                    {
+                        // Navigate to dashboard and trigger download
+                        CurrentView = DashboardVM;
+                        DashboardVM.AppIdInput = appId;
+                        if (DashboardVM.DownloadCommand.CanExecute(null))
+                        {
+                            DashboardVM.DownloadCommand.Execute(null);
+                        }
+                    }
+                }
+                else if (uri.Host.Equals("join", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    CurrentView = FamilyVaultVM;
+                    FamilyVaultVM.ImportTokenInput = url;
+                    if (FamilyVaultVM.ImportTokenCommand.CanExecute(null))
+                    {
+                        FamilyVaultVM.ImportTokenCommand.Execute(null);
+                    }
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to handle deep link: {ex.Message}");
+        }
     }
 }
 

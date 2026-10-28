@@ -296,6 +296,8 @@ public class MyGamesViewModel : ViewModelBase
                             entry.Description = gameInfo.ShortDescription;
                             entry.Type = gameInfo.Type;
                             entry.ReleaseDate = gameInfo.ReleaseDate;
+                            entry.Compatibility = gameInfo.Compatibility;
+                            entry.HltbData = gameInfo.HltbData;
                         });
                     }
 

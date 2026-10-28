@@ -16,7 +16,7 @@ public class SteamApiService
 
     static SteamApiService()
     {
-        _http.DefaultRequestHeaders.Add("User-Agent", "SteamVault/1.0");
+        _http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36");
     }
 
     public async Task<GameInfo?> GetAppDetailsAsync(string appId)
@@ -74,6 +74,34 @@ public class SteamApiService
                         game.Categories.Add(desc);
                 }
             }
+
+            // Extract PC Requirements
+            var pcReqs = data["pc_requirements"];
+            if (pcReqs != null && pcReqs.Type == JTokenType.Object)
+            {
+                var minimumReq = pcReqs["minimum"]?.Value<string>() ?? "";
+                var recommendedReq = pcReqs["recommended"]?.Value<string>() ?? "";
+                if (!string.IsNullOrWhiteSpace(minimumReq) && !string.IsNullOrWhiteSpace(recommendedReq))
+                {
+                    game.PcRequirements = minimumReq + "<br><strong>RECOMMENDED:</strong><br>" + recommendedReq;
+                }
+                else
+                {
+                    game.PcRequirements = !string.IsNullOrWhiteSpace(minimumReq) ? minimumReq : recommendedReq;
+                }
+            }
+
+            // Evaluate system compatibility
+            var hardwareService = new HardwareInfoService();
+            game.Compatibility = hardwareService.EvaluateRequirements(game.PcRequirements);
+
+            // Fetch HowLongToBeat stats in parallel
+            try
+            {
+                var hltbService = new HowLongToBeatService();
+                game.HltbData = await hltbService.GetHltbDataAsync(game.Name);
+            }
+            catch { }
 
             var dlc = data["dlc"] as JArray;
             if (dlc != null)

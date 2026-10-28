@@ -66,6 +66,11 @@ public class AppSettings
     public bool AutoUpdateEnabled { get; set; } = false;
 
     /// <summary>
+    /// User profile name displayed in Family Vault and sharing.
+    /// </summary>
+    public string Username { get; set; } = "VaultUser";
+
+    /// <summary>
     /// The last version of the application that was run. Used to show "What's New" on updates.
     /// </summary>
     public string LastRunVersion { get; set; } = "1.0.0.0";
@@ -74,6 +79,16 @@ public class AppSettings
     /// Tracks which version's "What's New" dialog has actually been displayed and dismissed by the user.
     /// </summary>
     public string ShownWhatsNewVersion { get; set; } = "";
+
+    /// <summary>
+    /// Enables Windows 11 Dark Glassmorphism (Acrylic/Mica backdrop blur) for Steam windows.
+    /// </summary>
+    public bool SteamGlassThemeEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Enables Turbo Downloader speed accelerator for Steam game depot downloads.
+    /// </summary>
+    public bool TurboDownloaderEnabled { get; set; } = true;
 
     /// <summary>
     /// Currently selected theme name. Default is "Gruvbox" (retro warm dark theme).

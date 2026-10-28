@@ -43,6 +43,23 @@
 
                 <Border Style="{DynamicResource SurfaceCard}" Margin="0,0,0,24" Padding="32,24">
                     <StackPanel>
+                        <!-- User Profile -->
+                        <TextBlock Text="User Profile &amp; Family Identity" Style="{DynamicResource SectionHeader}" Margin="0,0,0,16"/>
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="240" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Display Name / Username" FontWeight="Medium" FontSize="14" Margin="0,0,0,4"/>
+                                <TextBlock Text="This name identifies you when contributing games and sharing with members in Family Vault." 
+                                           Foreground="{DynamicResource MutedText}" TextWrapping="Wrap" FontSize="13" MaxWidth="500" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1" Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Height="36" Padding="10,8" VerticalContentAlignment="Center"/>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,20"/>
+
                         <!-- Background Operations -->
                         <TextBlock Text="Background and Startup" Style="{DynamicResource SectionHeader}" Margin="0,0,0,16"/>
                         <Grid>
@@ -61,6 +78,30 @@
                                            Foreground="{DynamicResource MutedText}" TextWrapping="Wrap" FontSize="13" MaxWidth="600" HorizontalAlignment="Left"/>
                             </StackPanel>
                             <CheckBox Grid.Column="1" Style="{DynamicResource ToggleSwitch}" IsChecked="False" IsEnabled="False" VerticalAlignment="Center" ToolTip="Auto-updates are temporarily disabled."/>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,24"/>
+
+                        <!-- Steam Integration & Performance Features -->
+                        <TextBlock Text="Steam Integration &amp; Performance" Style="{DynamicResource SectionHeader}" Margin="0,0,0,16"/>
+
+                        <!-- Steam Turbo Downloader -->
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="Steam Turbo Downloader Accelerator" FontWeight="Medium" FontSize="14" Margin="0,0,8,0"/>
+                                    <Border Background="#3038BDF8" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock Text="TURBO SPEED" Foreground="#38BDF8" FontSize="10" FontWeight="Bold"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="Uncaps TCP receive socket buffers (4 MB) and boosts thread priorities for maximum bandwidth utilization when downloading game depots." 
+                                           Foreground="{DynamicResource MutedText}" TextWrapping="Wrap" FontSize="13" MaxWidth="600" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                            <CheckBox Grid.Column="1" Style="{DynamicResource ToggleSwitch}" IsChecked="{Binding TurboDownloaderEnabled}" VerticalAlignment="Center"/>
                         </Grid>
 
                         <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,24"/>

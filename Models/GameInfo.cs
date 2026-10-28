@@ -45,6 +45,21 @@ public class GameInfo
             return Categories.Any(c => mpKeywords.Any(kw => c.Contains(kw, StringComparison.OrdinalIgnoreCase)));
         }
     }
+
+    /// <summary>
+    /// PC Requirements HTML/text snippet from Steam API.
+    /// </summary>
+    public string PcRequirements { get; set; } = "";
+
+    /// <summary>
+    /// Hardware compatibility evaluation for the user's PC.
+    /// </summary>
+    public SteamVault.Services.CompatibilityResult? Compatibility { get; set; }
+
+    /// <summary>
+    /// HowLongToBeat completion estimates.
+    /// </summary>
+    public SteamVault.Services.HowLongToBeatData? HltbData { get; set; }
 }
 
 public class DepotInfo : INotifyPropertyChanged

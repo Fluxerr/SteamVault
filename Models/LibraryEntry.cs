@@ -59,6 +59,55 @@ public class LibraryEntry : INotifyPropertyChanged
     /// </summary>
     public string? ETicket { get; set; }
 
+    private SteamVault.Services.CompatibilityResult? _compatibility;
+    public SteamVault.Services.CompatibilityResult? Compatibility
+    {
+        get => _compatibility;
+        set
+        {
+            _compatibility = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CompatibilityRating));
+            OnPropertyChanged(nameof(CompatibilityBadgeColor));
+            OnPropertyChanged(nameof(CompatibilityText));
+            OnPropertyChanged(nameof(UserCpuName));
+            OnPropertyChanged(nameof(UserGpuName));
+            OnPropertyChanged(nameof(UserRamText));
+            OnPropertyChanged(nameof(HasCompatibilityData));
+        }
+    }
+
+    private SteamVault.Services.HowLongToBeatData? _hltbData;
+    public SteamVault.Services.HowLongToBeatData? HltbData
+    {
+        get => _hltbData;
+        set
+        {
+            _hltbData = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HltbMainStory));
+            OnPropertyChanged(nameof(HltbMainExtra));
+            OnPropertyChanged(nameof(HltbCompletionist));
+            OnPropertyChanged(nameof(HasHltbData));
+        }
+    }
+
+    public string CompatibilityRating => Compatibility?.Rating ?? "";
+    public string CompatibilityBadgeColor => Compatibility?.BadgeColor ?? "#34D399";
+    public string CompatibilityText => Compatibility?.RecommendationText ?? "";
+    public string UserCpuName => Compatibility?.UserCpuName ?? "";
+    public string UserGpuName => Compatibility?.UserGpuName ?? "";
+    public string UserRamText => Compatibility?.UserRamText ?? "";
+    public string GameReqRam => Compatibility?.GameReqRam ?? "Not specified";
+    public string GameReqCpu => Compatibility?.GameReqCpu ?? "Not specified";
+    public string GameReqGpu => Compatibility?.GameReqGpu ?? "Not specified";
+    public bool HasCompatibilityData => Compatibility != null;
+
+    public string HltbMainStory => HltbData?.MainStoryTime ?? "--";
+    public string HltbMainExtra => HltbData?.MainExtraTime ?? "--";
+    public string HltbCompletionist => HltbData?.CompletionistTime ?? "--";
+    public bool HasHltbData => HltbData?.HasData == true;
+
     private bool _isInstalled;
     public bool IsInstalled
     {

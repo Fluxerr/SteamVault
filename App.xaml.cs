@@ -36,6 +36,12 @@ public partial class App : Application
 
     private async void Application_Startup(object sender, StartupEventArgs e)
     {
+        DispatcherUnhandledException += (s, args) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"Unhandled exception caught: {args.Exception}");
+            args.Handled = true; // Prevent app crash
+        };
+
         Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         if (e.Args.Length >= 4 && e.Args[0] == "--extract-fix")
@@ -53,6 +59,12 @@ public partial class App : Application
         _instanceMutex = new System.Threading.Mutex(true, "SteamVault_SingleInstance_Mutex", out bool createdNew);
         if (!createdNew)
         {
+            var deepLinkArg = e.Args.FirstOrDefault(a => a.StartsWith("steamvault://", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(deepLinkArg))
+            {
+                IpcService.SendMessageToPrimaryInstance(deepLinkArg);
+            }
+
             try
             {
                 if (System.Threading.EventWaitHandle.TryOpenExisting("SteamVault_ShowInstance_Event", out var existingEvent))
@@ -65,6 +77,10 @@ public partial class App : Application
             Shutdown();
             return;
         }
+
+        IpcService.OnMessageReceived += HandleIpcMessage;
+        IpcService.StartServer();
+        IpcService.RegisterProtocolHandler();
 
         _showEvent = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, "SteamVault_ShowInstance_Event");
         
@@ -177,7 +193,30 @@ public partial class App : Application
         {
             _settingsService.Save();
             InitializeMainApp(e.Args.Contains("--silent"));
+
+            // Check if primary instance was launched with a deep link
+            var deepLinkArg = e.Args.FirstOrDefault(a => a.StartsWith("steamvault://", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(deepLinkArg))
+            {
+                // We delay slightly to let the UI finish initializing
+                Task.Delay(1000).ContinueWith(_ => HandleIpcMessage(deepLinkArg));
+            }
         }
+    }
+
+    private void HandleIpcMessage(string message)
+    {
+        Current.Dispatcher.Invoke(() =>
+        {
+            if (message.StartsWith("steamvault://", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_mainWindow?.DataContext is MainViewModel mainVM)
+                {
+                    mainVM.HandleDeepLink(message);
+                }
+                ShowMainWindow();
+            }
+        });
     }
 
     /// <summary>
@@ -214,6 +253,7 @@ public partial class App : Application
         var onlineFixService = new OnlineFixService(_settingsService!);
         var gameMgmtService = new GameManagementService(_settingsService!, onlineFixService);
         var importService = new ImportService(_settingsService!, luaParser, steamApi);
+        var familyService = new FamilyVaultService(_settingsService!, depotKeyService, steamApi, luaGenerator);
 
         _autoUpdateService = new AutoUpdateService(
             _settingsService!,
@@ -234,7 +274,8 @@ public partial class App : Application
             gameMgmtService,
             luaToolsApi,
             authService,
-            importService);
+            importService,
+            familyService);
 
         object initialViewModel = mainVM;
 

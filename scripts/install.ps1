@@ -14,7 +14,7 @@ $AppVersion = '1.0.0'
 $global:AppVersion = $AppVersion
 
 # Where this script lives when it is fetched with "irm <url> | iex".
-$ScriptRawUrl = 'https://raw.githubusercontent.com/LarkTheStar/fix-installer/main/install.ps1'
+$ScriptRawUrl = 'https://raw.githubusercontent.com/Fluxerr/SteamVault/main/scripts/install.ps1'
 
 # Piped-in code has to be saved to a file so the GUI can run (and elevate) on its
 # own, but the text a script was handed is not reliable: under "irm ... | iex" the

@@ -14,7 +14,7 @@ public class InstallationViewModel : ViewModelBase
     private readonly SettingsService _settingsService;
     private readonly OpenSteamToolInstaller _installer;
 
-    public InstallationViewModel(SettingsService settingsService)
+    public InstallationViewModel(SettingsService settingsService, string? initialStatus = null)
     {
         _settingsService = settingsService;
         _installer = new OpenSteamToolInstaller();
@@ -29,6 +29,11 @@ public class InstallationViewModel : ViewModelBase
         }
 
         DetectSteamDirectory();
+        if (!string.IsNullOrWhiteSpace(initialStatus))
+        {
+            StatusMessage = initialStatus;
+            StatusIcon = "\u26A0\uFE0F";
+        }
         
         BrowseCommand = new RelayCommand(_ => BrowseSteamDirectory());
         ConfirmCommand = new RelayCommand(_ => ConfirmAndInstall());
@@ -141,6 +146,17 @@ public class InstallationViewModel : ViewModelBase
 
     private void DetectSteamDirectory()
     {
+        var configuredPath = _settingsService.Settings.SteamDirectory;
+        if (!string.IsNullOrWhiteSpace(configuredPath)
+            && Directory.Exists(configuredPath)
+            && File.Exists(Path.Combine(configuredPath, "steam.exe")))
+        {
+            SteamDirectory = configuredPath;
+            StatusMessage = "Using the configured Steam installation.";
+            StatusIcon = "\u2705";
+            return;
+        }
+
         var detectedPath = GetSteamPathFromRegistry();
         
         if (string.IsNullOrEmpty(detectedPath) || !Directory.Exists(detectedPath))
@@ -236,17 +252,6 @@ public class InstallationViewModel : ViewModelBase
 
         IsInstalling = true;
 
-        // Check if OpenSteamTool DLLs already exist in the target directory
-        if (CheckAlreadyInstalled(SteamDirectory))
-        {
-            // Already installed — skip file copy, just save settings
-            WpfApp.Current.Dispatcher.Invoke(() =>
-            {
-                SaveSettingsAndComplete(dllsCopied: 0, dirsCreated: 0, alreadyHad: true);
-            });
-            return;
-        }
-
         ProgressPercent = 0;
         ProgressText = "Preparing to install...";
 
@@ -273,13 +278,13 @@ public class InstallationViewModel : ViewModelBase
                     if (needsAdmin && !IsRunningAsAdmin())
                     {
                         RequestsAdmin = true;
-                        StatusMessage = "Administrator permissions required to create directories.";
+                        StatusMessage = "Administrator permissions are required to refresh files in this Steam folder.";
                         StatusIcon = "\U0001F512";
                         IsInstalling = false;
                     }
                     else if (result.Success)
                     {
-                        SaveSettingsAndComplete(result.DllsCopied, result.DirsCreated, alreadyHad: false);
+                        SaveSettingsAndComplete(result.DllsCopied, result.DirsCreated);
                     }
                     else
                     {
@@ -301,7 +306,7 @@ public class InstallationViewModel : ViewModelBase
         });
     }
 
-    private void SaveSettingsAndComplete(int dllsCopied, int dirsCreated, bool alreadyHad)
+    private void SaveSettingsAndComplete(int dllsCopied, int dirsCreated)
     {
         _settingsService.Settings.SteamDirectory = SteamDirectory;
         _settingsService.Settings.LuaOutputPath = Path.Combine(SteamDirectory, "config", "lua");
@@ -313,10 +318,7 @@ public class InstallationViewModel : ViewModelBase
         _settingsService.Settings.IsInstalled = true;
         _settingsService.Save();
 
-        if (alreadyHad)
-            StatusMessage = "OpenSteamTool is already installed — set your Family username to finish.";
-        else
-            StatusMessage = $"OpenSteamTool installed successfully! ({dllsCopied} DLLs, {dirsCreated} directories)";
+        StatusMessage = $"OpenSteamTool files refreshed successfully! ({dllsCopied} DLLs, {dirsCreated} directories created)";
 
         StatusIcon = "\u2705";
         IsComplete = true;
@@ -359,14 +361,6 @@ public class InstallationViewModel : ViewModelBase
         }
     }
 
-    private static bool CheckAlreadyInstalled(string directory)
-    {
-        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
-            return false;
-        // Only need to check for the main OpenSteamTool DLL — the proxy DLLs are optional
-        return File.Exists(Path.Combine(directory, "OpenSteamTool.dll"));
-    }
-
     private static bool IsRunningAsAdmin()
     {
         using var identity = WindowsIdentity.GetCurrent();
@@ -379,38 +373,49 @@ public class InstallationViewModel : ViewModelBase
 
 public class OpenSteamToolInstaller
 {
-    private static readonly string OpenSteamToolSource = Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory, "OpenSteamTool");
+    private const string OpenSteamToolResourcePrefix = "SteamVault.OpenSteamTool.";
 
     public InstallResult Install(string steamDirectory, out bool needsAdmin)
     {
         needsAdmin = false;
         var result = new InstallResult();
 
-        if (!Directory.Exists(OpenSteamToolSource))
+        if (string.IsNullOrWhiteSpace(steamDirectory)
+            || !Directory.Exists(steamDirectory)
+            || !File.Exists(Path.Combine(steamDirectory, "steam.exe")))
         {
-            result.ErrorMessage = $"OpenSteamTool folder not found at: {OpenSteamToolSource}";
+            result.ErrorMessage = "The configured Steam folder is invalid or does not contain steam.exe.";
             return result;
         }
 
-        var dllFiles = Directory.GetFiles(OpenSteamToolSource, "*.dll");
-        if (dllFiles.Length == 0)
+        var assembly = typeof(OpenSteamToolInstaller).Assembly;
+        var dllResources = assembly.GetManifestResourceNames()
+            .Where(name => name.StartsWith(OpenSteamToolResourcePrefix, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (dllResources.Length == 0)
         {
-            result.ErrorMessage = "No DLL files found in OpenSteamTool folder.";
+            result.ErrorMessage = "No bundled OpenSteamTool DLL resources were found.";
             return result;
         }
 
-        foreach (var dllPath in dllFiles)
+        foreach (var resourceName in dllResources)
         {
+            var dllName = resourceName[OpenSteamToolResourcePrefix.Length..];
             try
             {
-                var destPath = Path.Combine(steamDirectory, Path.GetFileName(dllPath));
-                File.Copy(dllPath, destPath, overwrite: true);
+                using var source = assembly.GetManifestResourceStream(resourceName);
+                if (source is null)
+                    throw new IOException($"Could not open bundled resource {resourceName}.");
+
+                var destPath = Path.Combine(steamDirectory, dllName);
+                using var destination = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                source.CopyTo(destination);
                 result.DllsCopied++;
             }
             catch (Exception ex)
             {
-                result.ErrorMessage = $"Failed to copy {Path.GetFileName(dllPath)}: {ex.Message}";
+                needsAdmin = ex is UnauthorizedAccessException;
+                result.ErrorMessage = $"Failed to refresh {dllName}: {ex.Message}";
                 return result;
             }
         }

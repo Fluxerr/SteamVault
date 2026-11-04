@@ -102,9 +102,8 @@ On first launch, SteamVault will guide you through a one-time setup:
 2. Displays the detected path — you can verify or browse to change it
 3. **Installs OpenSteamTool** by copying 3 lightweight DLLs into your Steam folder
 4. Creates the necessary `config\lua` and `config\depotcache` directories
-5. If OpenSteamTool files already exist, it detects them and skips straight to the app
 
-> Once installed, the wizard never appears again. Your settings are saved in `%APPDATA%\SteamVault\settings.json`.
+> Once installed, the wizard never appears again. SteamVault refreshes the bundled OpenSteamTool DLLs in the configured Steam folder on every launch. Your settings are saved in `%APPDATA%\SteamVault\settings.json`.
 
 ---
 

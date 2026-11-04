@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "SteamVault"
-#define MyAppVersion "2.6.1"
+#define MyAppVersion "2.6.2"
 #define MyAppPublisher "SteamVault"
 #define MyAppURL "https://github.com/Fluxerr/SteamVault-Updater"
 #define MyAppExeName "SteamVault.exe"
@@ -26,7 +26,7 @@ DisableProgramGroupPage=yes
 ; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputBaseFilename=SteamVault_Installer
+OutputBaseFilename=SteamVault-Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -40,8 +40,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 ; IMPORTANT: This path must point to your PUBLISHED output, not just bin\Release.
 ; When building for the installer, publish the project as self-contained without single-file enabled.
-Source: "..\bin\Release\net9.0-windows\win-x64\publish\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\net9.0-windows\win-x64\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.zip"
+Source: "..\publish\release-installer\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\publish\release-installer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.zip"
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

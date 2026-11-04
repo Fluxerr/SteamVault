@@ -165,33 +165,26 @@ public partial class App : Application
             _pendingWhatsNewVM.LoadReleaseNotes(currentVersion, release?.Body);
         }
 
-        // Check if OpenSteamTool installation is needed (first run)
+        // First-time setup asks the user to confirm the Steam directory. Existing installs
+        // refresh the bundled OpenSteamTool DLLs on every launch so older copies are replaced.
         if (!_settingsService.Settings.IsInstalled)
         {
             _settingsService.Save();
-
-            // Show installation wizard — user verifies directory, then we check for existing DLLs
-            var installVM = new InstallationViewModel(_settingsService);
-            
-            installVM.OnInstallationComplete += () =>
-            {
-                Current.Dispatcher.Invoke(() =>
-                {
-                    InitializeMainApp(startSilent: false);
-                });
-            };
-
-            // Create window showing installation view
-            _mainWindow = new MainWindow
-            {
-                DataContext = installVM
-            };
-            _mainWindow.Closing += MainWindow_Closing;
-            _mainWindow.Show();
+            ShowInstallationWizard();
         }
         else
         {
             _settingsService.Save();
+
+            var refreshResult = await Task.Run(() =>
+                new OpenSteamToolInstaller().Install(_settingsService.Settings.SteamDirectory, out _));
+
+            if (!refreshResult.Success)
+            {
+                ShowInstallationWizard($"Could not refresh OpenSteamTool in the saved Steam folder: {refreshResult.ErrorMessage}");
+                return;
+            }
+
             InitializeMainApp(e.Args.Contains("--silent"));
 
             // Check if primary instance was launched with a deep link
@@ -202,6 +195,19 @@ public partial class App : Application
                 Task.Delay(1000).ContinueWith(_ => HandleIpcMessage(deepLinkArg));
             }
         }
+    }
+
+    private void ShowInstallationWizard(string? initialStatus = null)
+    {
+        var installVM = new InstallationViewModel(_settingsService!, initialStatus);
+        installVM.OnInstallationComplete += () =>
+        {
+            Current.Dispatcher.Invoke(() => InitializeMainApp(startSilent: false));
+        };
+
+        _mainWindow = new MainWindow { DataContext = installVM };
+        _mainWindow.Closing += MainWindow_Closing;
+        _mainWindow.Show();
     }
 
     private void HandleIpcMessage(string message)
@@ -217,20 +223,6 @@ public partial class App : Application
                 ShowMainWindow();
             }
         });
-    }
-
-    /// <summary>
-    /// Checks whether OpenSteamTool DLLs already exist in the given Steam directory.
-    /// </summary>
-    private static bool IsOpenSteamToolAlreadyInstalled(string steamDirectory)
-    {
-        if (string.IsNullOrWhiteSpace(steamDirectory) || !System.IO.Directory.Exists(steamDirectory))
-            return false;
-
-        // Check for the signature OpenSteamTool DLLs
-        var dllNames = new[] { "OpenSteamTool.dll", "dwmapi.dll", "xinput1_4.dll" };
-        return dllNames.All(dll => System.IO.File.Exists(
-            System.IO.Path.Combine(steamDirectory, dll)));
     }
 
     private void InitializeMainApp(bool startSilent)

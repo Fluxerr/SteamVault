@@ -1,0 +1,90 @@
+<UserControl x:Class="SteamVault.Views.TroubleshootingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:viewmodels="clr-namespace:SteamVault.ViewModels"
+             xmlns:converters="clr-namespace:SteamVault.Converters"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=viewmodels:TroubleshootingViewModel}"
+             d:DesignHeight="680" d:DesignWidth="900">
+
+    <UserControl.Resources>
+        <converters:InvertibleBoolToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
+    <Grid Margin="48,40,48,40">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,28">
+            <TextBlock Text="Troubleshoot" Style="{DynamicResource TitleText}"/>
+            <TextBlock Text="Repair common Steam and OpenSteamTool setup problems." Style="{DynamicResource SubtitleText}"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,0,16,0">
+                <Border Style="{DynamicResource SurfaceCard}" Padding="28" Margin="0,0,0,20">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,24,0">
+                            <TextBlock Text="Restore OpenSteamTool files" Style="{DynamicResource SectionHeader}" Margin="0,0,0,10"/>
+                            <TextBlock Text="Replace the bundled OpenSteamTool DLLs in your Steam folder and recreate any missing Lua or depot cache folders. Steam closes first and stays closed so it can load the repaired files the next time you start it." TextWrapping="Wrap" Foreground="{DynamicResource MutedText}" FontSize="13"/>
+                            <TextBlock Text="If antivirus quarantines the files again, restore SteamVault from its quarantine or allow SteamVault before retrying." TextWrapping="Wrap" Foreground="{DynamicResource DimText}" FontSize="12" Margin="0,12,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Command="{Binding RepairOpenSteamToolCommand}" Style="{DynamicResource DrawOutlineButton}" Padding="16,10" VerticalAlignment="Center" MinWidth="180" IsEnabled="{Binding IsNotBusy}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0"/>
+                                <TextBlock Text="Repair DLLs"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <Border Style="{DynamicResource SurfaceCard}" Padding="28" Margin="0,0,0,20">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,24,0">
+                            <TextBlock Text="Recreate Steam folders" Style="{DynamicResource SectionHeader}" Margin="0,0,0,10"/>
+                            <TextBlock Text="Create missing config\lua, config\depotcache, and depotcache folders. This does not close Steam or change existing files." TextWrapping="Wrap" Foreground="{DynamicResource MutedText}" FontSize="13"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Command="{Binding RecreateFoldersCommand}" Style="{DynamicResource GhostButton}" Padding="16,10" VerticalAlignment="Center" MinWidth="180" IsEnabled="{Binding IsNotBusy}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Margin="0,0,8,0"/>
+                                <TextBlock Text="Repair folders"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <Border Style="{DynamicResource SurfaceCard}" Padding="28">
+                    <StackPanel>
+                        <TextBlock Text="Detected Steam folder" Style="{DynamicResource SectionHeader}" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding SteamDirectory}" TextWrapping="Wrap" Foreground="{DynamicResource MutedText}" FontSize="13"/>
+                        <TextBlock Text="No valid Steam folder is configured. Choose the Steam installation folder in Settings before running repairs." TextWrapping="Wrap" Foreground="{DynamicResource WarningBrush}" FontSize="13" Margin="0,8,0,0" Visibility="{Binding IsSteamDirectoryValid, Converter={StaticResource BoolToVis}, ConverterParameter=invert}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <Button Command="{Binding OpenSteamFolderCommand}" Style="{DynamicResource GhostButton}" HorizontalAlignment="Left" Padding="12,8" Content="Open Steam folder" IsEnabled="{Binding IsSteamDirectoryValid}"/>
+                            <Button Command="{Binding RestartAsAdminCommand}" Style="{DynamicResource GhostButton}" HorizontalAlignment="Left" Padding="12,8" Margin="8,0,0,0" Content="Restart SteamVault as Admin"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceRaised}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,16,0,0">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE946;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Foreground="{DynamicResource PrimaryAccent}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="{DynamicResource Text}" FontSize="13" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

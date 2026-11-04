@@ -166,7 +166,7 @@ public partial class App : Application
         }
 
         // First-time setup asks the user to confirm the Steam directory. Existing installs
-        // refresh the bundled OpenSteamTool DLLs on every launch so older copies are replaced.
+        // Check for updated bundled OpenSteamTool DLLs at launch; only write when they differ.
         if (!_settingsService.Settings.IsInstalled)
         {
             _settingsService.Save();
@@ -176,16 +176,21 @@ public partial class App : Application
         {
             _settingsService.Save();
 
-            var refreshResult = await Task.Run(() =>
-                new OpenSteamToolInstaller().Install(_settingsService.Settings.SteamDirectory, out _));
+            var (refreshResult, needsAdmin) = await Task.Run(() =>
+            {
+                var result = new OpenSteamToolInstaller().Install(_settingsService.Settings.SteamDirectory, out bool requiresAdmin);
+                return (result, requiresAdmin);
+            });
 
+            string? refreshNotice = null;
             if (!refreshResult.Success)
             {
-                ShowInstallationWizard($"Could not refresh OpenSteamTool in the saved Steam folder: {refreshResult.ErrorMessage}");
-                return;
+                refreshNotice = $"OpenSteamTool refresh is pending: {refreshResult.ErrorMessage}";
+                if (needsAdmin)
+                    refreshNotice += " Restart SteamVault as administrator, then use Repair DLLs.";
             }
 
-            InitializeMainApp(e.Args.Contains("--silent"));
+            InitializeMainApp(e.Args.Contains("--silent"), refreshNotice);
 
             // Check if primary instance was launched with a deep link
             var deepLinkArg = e.Args.FirstOrDefault(a => a.StartsWith("steamvault://", StringComparison.OrdinalIgnoreCase));
@@ -225,7 +230,7 @@ public partial class App : Application
         });
     }
 
-    private void InitializeMainApp(bool startSilent)
+    private void InitializeMainApp(bool startSilent, string? troubleshootingStatus = null)
     {
         // Start Discord Rich Presence
         DiscordService.Instance.Initialize();
@@ -267,7 +272,8 @@ public partial class App : Application
             luaToolsApi,
             authService,
             importService,
-            familyService);
+            familyService,
+            troubleshootingStatus);
 
         object initialViewModel = mainVM;
 

@@ -1,4 +1,5 @@
 using System.IO;
+using Microsoft.Win32;
 
 namespace SteamVault.Models;
 
@@ -112,8 +113,18 @@ public class AppSettings
     /// </summary>
     public bool AutoDetectPaths()
     {
-        if (!string.IsNullOrWhiteSpace(SteamDirectory) && Directory.Exists(SteamDirectory))
+        if (!string.IsNullOrWhiteSpace(SteamDirectory)
+            && Directory.Exists(SteamDirectory)
+            && File.Exists(Path.Combine(SteamDirectory, "steam.exe")))
         {
+            EnsureDerivedPaths();
+            return true;
+        }
+
+        var registryPath = GetSteamPathFromRegistry();
+        if (!string.IsNullOrWhiteSpace(registryPath))
+        {
+            SteamDirectory = registryPath;
             EnsureDerivedPaths();
             return true;
         }
@@ -133,7 +144,7 @@ public class AppSettings
 
         foreach (var path in candidates)
         {
-            if (Directory.Exists(path))
+            if (Directory.Exists(path) && File.Exists(Path.Combine(path, "steam.exe")))
             {
                 SteamDirectory = path;
                 EnsureDerivedPaths();
@@ -145,6 +156,33 @@ public class AppSettings
         SteamDirectory = @"C:\Program Files (x86)\Steam";
         EnsureDerivedPaths();
         return false;
+    }
+
+    private static string? GetSteamPathFromRegistry()
+    {
+        string?[] registryValues;
+
+        try
+        {
+            using var key64 = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Valve\Steam");
+            using var key32 = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Valve\Steam");
+            using var userKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Valve\Steam");
+            registryValues =
+            [
+                key64?.GetValue("InstallPath") as string,
+                key32?.GetValue("InstallPath") as string,
+                userKey?.GetValue("SteamPath") as string
+            ];
+        }
+        catch
+        {
+            return null;
+        }
+
+        return registryValues.FirstOrDefault(path =>
+            !string.IsNullOrWhiteSpace(path)
+            && Directory.Exists(path)
+            && File.Exists(Path.Combine(path, "steam.exe")));
     }
 }
 

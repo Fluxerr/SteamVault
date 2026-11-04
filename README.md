@@ -56,6 +56,7 @@ This allows you to own steam games for completely free.
 | **Fully Offline** | No Steam client, no login, no API tokens needed. All data comes from public Steam CDN endpoints. |
 | **Premium Dark UI** | Modern glass-morphism design with animated transitions, shimmer loading skeletons, and a polished dark theme. |
 | **OpenSteamTool Auto-Install** | First-run wizard automatically detects your Steam directory, copies DLLs, and configures directories — no manual steps. |
+| **OpenSteamTool Troubleshooting** | Repair the bundled DLLs and recreate required Steam cache folders from the Troubleshoot page. |
 | **Depot Key Database** | Built-in synchronized database of depot decryption keys and app access tokens, auto-updated from GitHub. |
 | **Live Status Dashboard** | See all games, their update status, last-updated timestamps, and depot manifests at a glance. |
 | **System Tray Support** | Run minimized to tray with balloon notifications for background updates. |

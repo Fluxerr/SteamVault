@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "SteamVault"
-#define MyAppVersion "2.6.2"
+#define MyAppVersion "2.6.3"
 #define MyAppPublisher "SteamVault"
 #define MyAppURL "https://github.com/Fluxerr/SteamVault-Updater"
 #define MyAppExeName "SteamVault.exe"

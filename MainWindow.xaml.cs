@@ -65,6 +65,7 @@ public partial class MainWindow : Window
             OnlineViewModel => 3,
             StatsViewModel => 4,
             SettingsViewModel => 5,
+            TroubleshootingViewModel => 6,
             _ => 0
         };
     }

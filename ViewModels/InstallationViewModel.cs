@@ -3,6 +3,7 @@ using SteamVault.Models;
 using SteamVault.Services;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Windows.Input;
 using WpfApp = System.Windows.Application;
@@ -398,11 +399,21 @@ public class OpenSteamToolInstaller
             return result;
         }
 
+        var filesNeedRefresh = dllResources.Any(resourceName => !IsResourceCurrent(assembly, resourceName, steamDirectory));
+        if (filesNeedRefresh && IsSteamRunning())
+        {
+            result.ErrorMessage = "Steam is running and may have these files loaded. Close Steam, then retry the refresh from Troubleshoot.";
+            return result;
+        }
+
         foreach (var resourceName in dllResources)
         {
             var dllName = resourceName[OpenSteamToolResourcePrefix.Length..];
             try
             {
+                if (IsResourceCurrent(assembly, resourceName, steamDirectory))
+                    continue;
+
                 using var source = assembly.GetManifestResourceStream(resourceName);
                 if (source is null)
                     throw new IOException($"Could not open bundled resource {resourceName}.");
@@ -420,33 +431,79 @@ public class OpenSteamToolInstaller
             }
         }
 
-        // Create config\lua, config\depotcache, and root depotcache directories
-        var configDir = Path.Combine(steamDirectory, "config");
-        var luaPath = Path.Combine(configDir, "lua");
-        var primaryDepotcache = Path.Combine(configDir, "depotcache");
-        var secondaryDepotcache = Path.Combine(steamDirectory, "depotcache");
-
         try
         {
-            var dirsToCreate = new[] { luaPath, primaryDepotcache, secondaryDepotcache };
-            foreach (var dir in dirsToCreate)
-            {
-                if (!Directory.Exists(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                    result.DirsCreated++;
-                }
-            }
+            result.DirsCreated = EnsureRequiredDirectories(steamDirectory);
         }
-        catch (UnauthorizedAccessException)
+        catch (Exception ex)
         {
-            needsAdmin = true;
-            result.ErrorMessage = "Need admin permissions to create config directories.";
+            needsAdmin = ex is UnauthorizedAccessException;
+            result.ErrorMessage = $"Could not create the required Steam folders: {ex.Message}";
             return result;
         }
 
         result.Success = true;
         return result;
+    }
+
+    public static bool IsSteamRunning()
+    {
+        var processes = Process.GetProcessesByName("steam");
+        foreach (var process in processes)
+            process.Dispose();
+        return processes.Length > 0;
+    }
+
+    private static bool IsResourceCurrent(System.Reflection.Assembly assembly, string resourceName, string steamDirectory)
+    {
+        try
+        {
+            var destinationPath = Path.Combine(steamDirectory, resourceName[OpenSteamToolResourcePrefix.Length..]);
+            if (!File.Exists(destinationPath))
+                return false;
+
+            using var bundledStream = assembly.GetManifestResourceStream(resourceName);
+            if (bundledStream is null)
+                return false;
+
+            using var installedStream = File.OpenRead(destinationPath);
+            return CryptographicOperations.FixedTimeEquals(
+                SHA256.HashData(bundledStream),
+                SHA256.HashData(installedStream));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static int EnsureRequiredDirectories(string steamDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(steamDirectory)
+            || !Directory.Exists(steamDirectory)
+            || !File.Exists(Path.Combine(steamDirectory, "steam.exe")))
+        {
+            throw new DirectoryNotFoundException("The configured Steam folder is invalid or does not contain steam.exe.");
+        }
+
+        var directories = new[]
+        {
+            Path.Combine(steamDirectory, "config", "lua"),
+            Path.Combine(steamDirectory, "config", "depotcache"),
+            Path.Combine(steamDirectory, "depotcache")
+        };
+
+        int created = 0;
+        foreach (var directory in directories)
+        {
+            if (Directory.Exists(directory))
+                continue;
+
+            Directory.CreateDirectory(directory);
+            created++;
+        }
+
+        return created;
     }
 }
 

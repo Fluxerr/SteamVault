@@ -14,6 +14,7 @@ public class MainViewModel : ViewModelBase
     public OnlineViewModel OnlineVM { get; }
     public StatsViewModel StatsVM { get; }
     public FamilyVaultViewModel FamilyVaultVM { get; }
+    public TroubleshootingViewModel TroubleshootingVM { get; }
 
     private ViewModelBase _currentView = null!;
     public ViewModelBase CurrentView
@@ -30,6 +31,7 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsOnlineActive));
                 OnPropertyChanged(nameof(IsStatsActive));
                 OnPropertyChanged(nameof(IsFamilyActive));
+                OnPropertyChanged(nameof(IsTroubleshootingActive));
             }
         }
     }
@@ -41,6 +43,7 @@ public class MainViewModel : ViewModelBase
     public bool IsOnlineActive => CurrentView == OnlineVM;
     public bool IsStatsActive => CurrentView == StatsVM;
     public bool IsFamilyActive => CurrentView == FamilyVaultVM;
+    public bool IsTroubleshootingActive => CurrentView == TroubleshootingVM;
 
     public ICommand NavigateDashboardCommand { get; }
     public ICommand NavigateSettingsCommand { get; }
@@ -49,6 +52,7 @@ public class MainViewModel : ViewModelBase
     public ICommand NavigateOnlineCommand { get; }
     public ICommand NavigateStatsCommand { get; }
     public ICommand NavigateFamilyCommand { get; }
+    public ICommand NavigateTroubleshootingCommand { get; }
 
     public string GameCount => CountLuaFiles();
 
@@ -84,7 +88,8 @@ public class MainViewModel : ViewModelBase
         SteamVault.Services.LuaToolsApiClient apiClient,
         AuthService authService,
         ImportService importService,
-        FamilyVaultService familyService)
+        FamilyVaultService familyService,
+        string? troubleshootingStatus = null)
     {
         _settingsService = settingsService;
 
@@ -101,11 +106,16 @@ public class MainViewModel : ViewModelBase
         OnlineVM = new OnlineViewModel(settingsService, steamApi, luaParser, onlineFixService, apiClient, authService);
         StatsVM = new StatsViewModel(settingsService, luaParser, steamApi, gameMgmtService);
         FamilyVaultVM = new FamilyVaultViewModel(familyService, settingsService, steamApi, searchService);
+        TroubleshootingVM = new TroubleshootingViewModel(settingsService, troubleshootingStatus);
 
         if (!string.IsNullOrWhiteSpace(App.PendingFixZipPath))
         {
             CurrentView = OnlineVM;
             _ = OnlineVM.ProcessPendingExtractionAsync();
+        }
+        else if (!string.IsNullOrWhiteSpace(troubleshootingStatus))
+        {
+            CurrentView = TroubleshootingVM;
         }
         else
         {
@@ -133,6 +143,7 @@ public class MainViewModel : ViewModelBase
             _ = StatsVM.RefreshStatsAsync();
         });
         NavigateFamilyCommand = new RelayCommand(_ => CurrentView = FamilyVaultVM);
+        NavigateTroubleshootingCommand = new RelayCommand(_ => CurrentView = TroubleshootingVM);
 
         // Listen for settings changes to update sidebar
         SettingsVM.PropertyChanged += (_, e) =>

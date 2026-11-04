@@ -32,7 +32,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0">
                     <TextBlock Text="SteamVault" FontFamily="pack://application:,,,/Fonts/#Inter, Segoe UI, sans-serif" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource Text}"/>
                     <Border CornerRadius="6" Background="{DynamicResource SurfaceBase}" Padding="6,2" Margin="12,0,0,0">
-                        <TextBlock Text="v2.6.3" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace" FontSize="10" Foreground="{DynamicResource DimText}" VerticalAlignment="Center"/>
+                        <TextBlock Text="v2.6.4" FontFamily="pack://application:,,,/Fonts/#JetBrains Mono, Consolas, monospace" FontSize="10" Foreground="{DynamicResource DimText}" VerticalAlignment="Center"/>
                     </Border>
                 </StackPanel>
 

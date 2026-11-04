@@ -3,6 +3,7 @@ using SteamVault.ViewModels;
 using System.Windows;
 using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
 using Application = System.Windows.Application;
 
 namespace SteamVault;
@@ -55,6 +56,13 @@ public partial class App : Application
             }
         }
 
+        if (e.Args.Length == 2 && e.Args[0] == "--install-opensteamtool-dlls")
+        {
+            Environment.ExitCode = await InstallOpenSteamToolForSetupAsync(e.Args[1]);
+            Shutdown();
+            return;
+        }
+
         // 1. Single Instance mutext check
         _instanceMutex = new System.Threading.Mutex(true, "SteamVault_SingleInstance_Mutex", out bool createdNew);
         if (!createdNew)
@@ -105,6 +113,17 @@ public partial class App : Application
         // 2. Standard initialization
         _settingsService = new SettingsService();
         _settingsService.Load();
+
+        var setupPathArgument = Array.IndexOf(e.Args, "--installed-by-setup");
+        if (setupPathArgument >= 0
+            && setupPathArgument + 1 < e.Args.Length
+            && File.Exists(Path.Combine(e.Args[setupPathArgument + 1], "steam.exe")))
+        {
+            _settingsService.Settings.SteamDirectory = e.Args[setupPathArgument + 1];
+            _settingsService.Settings.LuaOutputPath = Path.Combine(e.Args[setupPathArgument + 1], "config", "lua");
+            _settingsService.Settings.DepotcachePath = Path.Combine(e.Args[setupPathArgument + 1], "config", "depotcache");
+            _settingsService.Settings.IsInstalled = true;
+        }
 
         // Auto-detect Steam paths if not configured
         _settingsService.Settings.AutoDetectPaths();
@@ -165,8 +184,8 @@ public partial class App : Application
             _pendingWhatsNewVM.LoadReleaseNotes(currentVersion, release?.Body);
         }
 
-        // First-time setup asks the user to confirm the Steam directory. Existing installs
-        // Check for updated bundled OpenSteamTool DLLs at launch; only write when they differ.
+        // First-time portable setup asks the user to confirm Steam. The Inno installer copies
+        // the DLLs during setup; normal app launches do not touch the Steam folder.
         if (!_settingsService.Settings.IsInstalled)
         {
             _settingsService.Save();
@@ -175,22 +194,7 @@ public partial class App : Application
         else
         {
             _settingsService.Save();
-
-            var (refreshResult, needsAdmin) = await Task.Run(() =>
-            {
-                var result = new OpenSteamToolInstaller().Install(_settingsService.Settings.SteamDirectory, out bool requiresAdmin);
-                return (result, requiresAdmin);
-            });
-
-            string? refreshNotice = null;
-            if (!refreshResult.Success)
-            {
-                refreshNotice = $"OpenSteamTool refresh is pending: {refreshResult.ErrorMessage}";
-                if (needsAdmin)
-                    refreshNotice += " Restart SteamVault as administrator, then use Repair DLLs.";
-            }
-
-            InitializeMainApp(e.Args.Contains("--silent"), refreshNotice);
+            InitializeMainApp(e.Args.Contains("--silent"));
 
             // Check if primary instance was launched with a deep link
             var deepLinkArg = e.Args.FirstOrDefault(a => a.StartsWith("steamvault://", StringComparison.OrdinalIgnoreCase));
@@ -199,6 +203,22 @@ public partial class App : Application
                 // We delay slightly to let the UI finish initializing
                 Task.Delay(1000).ContinueWith(_ => HandleIpcMessage(deepLinkArg));
             }
+        }
+    }
+
+    private static async Task<int> InstallOpenSteamToolForSetupAsync(string steamDirectory)
+    {
+        try
+        {
+            await OpenSteamToolInstaller.CloseSteamAsync(steamDirectory);
+            var result = new OpenSteamToolInstaller().Install(steamDirectory, out bool needsAdmin);
+            if (result.Success)
+                return 0;
+            return needsAdmin ? 5 : 1;
+        }
+        catch
+        {
+            return 4;
         }
     }
 

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "SteamVault"
-#define MyAppVersion "2.6.3"
+#define MyAppVersion "2.6.4"
 #define MyAppPublisher "SteamVault"
 #define MyAppURL "https://github.com/Fluxerr/SteamVault-Updater"
 #define MyAppExeName "SteamVault.exe"
@@ -54,5 +54,92 @@ Root: HKCU; Subkey: "Software\Classes\steamvault"; ValueType: string; ValueName:
 Root: HKCU; Subkey: "Software\Classes\steamvault\DefaultIcon"; ValueType: string; ValueData: "{app}\{#MyAppExeName},0"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\steamvault\shell\open\command"; ValueType: string; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Flags: uninsdeletekey
 
+[Code]
+var
+  DetectedSteamPath: String;
+  OpenSteamToolInstalled: Boolean;
+
+function IsSteamFolder(const Folder: String): Boolean;
+begin
+  Result := (Folder <> '') and FileExists(AddBackslash(Folder) + 'steam.exe');
+end;
+
+function FindSteamFolder: String;
+var
+  Candidate: String;
+begin
+  Result := '';
+  if RegQueryStringValue(HKLM, 'SOFTWARE\Valve\Steam', 'InstallPath', Candidate) and IsSteamFolder(Candidate) then
+    Result := Candidate
+  else if RegQueryStringValue(HKLM, 'SOFTWARE\WOW6432Node\Valve\Steam', 'InstallPath', Candidate) and IsSteamFolder(Candidate) then
+    Result := Candidate
+  else if RegQueryStringValue(HKCU, 'SOFTWARE\Valve\Steam', 'SteamPath', Candidate) and IsSteamFolder(Candidate) then
+    Result := Candidate;
+
+  if Result <> '' then
+    exit;
+
+  if IsSteamFolder(ExpandConstant('{pf32}\Steam')) then
+    Result := ExpandConstant('{pf32}\Steam')
+  else if IsSteamFolder(ExpandConstant('{pf}\Steam')) then
+    Result := ExpandConstant('{pf}\Steam')
+  else if IsSteamFolder('D:\Steam') then
+    Result := 'D:\Steam'
+  else if IsSteamFolder('C:\Steam') then
+    Result := 'C:\Steam';
+end;
+
+function RunOpenSteamToolHelper(const Verb: String; var ResultCode: Integer): Boolean;
+var
+  Parameters: String;
+begin
+  Parameters := '--install-opensteamtool-dlls "' + DetectedSteamPath + '"';
+  Result := ShellExec(Verb, ExpandConstant('{app}\{#MyAppExeName}'), Parameters,
+    ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+function GetFirstRunParameters(Param: String): String;
+begin
+  if OpenSteamToolInstalled then
+    Result := '--installed-by-setup "' + DetectedSteamPath + '"'
+  else
+    Result := '';
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if CurStep <> ssPostInstall then
+    exit;
+  if WizardSilent then
+    exit;
+
+  DetectedSteamPath := FindSteamFolder;
+  if DetectedSteamPath = '' then begin
+    MsgBox('SteamVault could not find a Steam folder containing steam.exe. OpenSteamTool DLLs were not installed. You can select the Steam folder in SteamVault and use Troubleshoot later.', mbInformation, MB_OK);
+    exit;
+  end;
+
+  if MsgBox('SteamVault will close Steam and refresh its OpenSteamTool DLLs in:' + #13#10 + DetectedSteamPath + #13#10#13#10 + 'Save your work and stop downloads before continuing.', mbConfirmation, MB_OKCANCEL) <> IDOK then
+    exit;
+
+  if not RunOpenSteamToolHelper('', ResultCode) then begin
+    MsgBox('SteamVault could not start its OpenSteamTool installer helper. You can use Troubleshoot after setup.', mbError, MB_OK);
+    exit;
+  end;
+
+  if ResultCode = 5 then begin
+    if not RunOpenSteamToolHelper('runas', ResultCode) then begin
+      MsgBox('Administrator permission was not granted, so OpenSteamTool DLLs were not installed. Restart SteamVault as administrator and use Troubleshoot.', mbInformation, MB_OK);
+      exit;
+    end;
+  end;
+
+  OpenSteamToolInstalled := ResultCode = 0;
+  if not OpenSteamToolInstalled then
+    MsgBox('OpenSteamTool DLL installation failed. Close Steam if it is still open, check antivirus quarantine, then run SteamVault as administrator and use Troubleshoot.', mbError, MB_OK);
+end;
+
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent; WorkingDir: "{app}"
+Filename: "{app}\{#MyAppExeName}"; Parameters: "{code:GetFirstRunParameters}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent; WorkingDir: "{app}"

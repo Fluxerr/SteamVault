@@ -85,7 +85,7 @@ public class TroubleshootingViewModel : ViewModelBase
         {
             var result = await Task.Run(async () =>
             {
-                await CloseSteamAsync();
+                await OpenSteamToolInstaller.CloseSteamAsync(SteamDirectory);
                 var installResult = _installer.Install(SteamDirectory, out bool needsAdmin);
                 return (installResult, needsAdmin);
             });
@@ -139,44 +139,6 @@ public class TroubleshootingViewModel : ViewModelBase
         {
             IsBusy = false;
         }
-    }
-
-    private async Task CloseSteamAsync()
-    {
-        var steamProcesses = Process.GetProcessesByName("steam");
-        if (steamProcesses.Length == 0)
-            return;
-        foreach (var process in steamProcesses)
-            process.Dispose();
-
-        try
-        {
-            using var shutdown = Process.Start(new ProcessStartInfo
-            {
-                FileName = Path.Combine(SteamDirectory, "steam.exe"),
-                Arguments = "-shutdown",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            });
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Steam could not be asked to shut down: {ex.Message}", ex);
-        }
-
-        var timeout = DateTime.UtcNow.AddSeconds(25);
-        while (DateTime.UtcNow < timeout)
-        {
-            await Task.Delay(500);
-            var currentProcesses = Process.GetProcessesByName("steam");
-            foreach (var process in currentProcesses)
-                process.Dispose();
-
-            if (currentProcesses.Length == 0)
-                return;
-        }
-
-        throw new TimeoutException("Steam did not close. Close Steam manually, then run the repair again. SteamVault did not force-quit it.");
     }
 
     private void OpenSteamFolder()

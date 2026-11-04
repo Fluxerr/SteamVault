@@ -3,7 +3,6 @@ using SteamVault.Models;
 using SteamVault.Services;
 using System.Diagnostics;
 using System.IO;
-using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Windows.Input;
 using WpfApp = System.Windows.Application;
@@ -266,6 +265,8 @@ public class InstallationViewModel : ViewModelBase
                 await Task.Delay(400);
                 WpfApp.Current.Dispatcher.Invoke(() => { ProgressPercent = 50; ProgressText = "Creating config directories..."; });
 
+                WpfApp.Current.Dispatcher.Invoke(() => { ProgressText = "Closing Steam before copying DLLs..."; });
+                await OpenSteamToolInstaller.CloseSteamAsync(SteamDirectory);
                 var result = _installer.Install(SteamDirectory, out bool needsAdmin);
                 await Task.Delay(300);
 
@@ -399,28 +400,22 @@ public class OpenSteamToolInstaller
             return result;
         }
 
-        var filesNeedRefresh = dllResources.Any(resourceName => !IsResourceCurrent(assembly, resourceName, steamDirectory));
-        if (filesNeedRefresh && IsSteamRunning())
-        {
-            result.ErrorMessage = "Steam is running and may have these files loaded. Close Steam, then retry the refresh from Troubleshoot.";
-            return result;
-        }
-
         foreach (var resourceName in dllResources)
         {
             var dllName = resourceName[OpenSteamToolResourcePrefix.Length..];
             try
             {
-                if (IsResourceCurrent(assembly, resourceName, steamDirectory))
-                    continue;
-
                 using var source = assembly.GetManifestResourceStream(resourceName);
                 if (source is null)
                     throw new IOException($"Could not open bundled resource {resourceName}.");
 
                 var destPath = Path.Combine(steamDirectory, dllName);
-                using var destination = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                source.CopyTo(destination);
+                using (var destination = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    source.CopyTo(destination);
+
+                if (!File.Exists(destPath))
+                    throw new IOException("The DLL disappeared after it was copied. Check your antivirus quarantine and allow SteamVault before retrying.");
+
                 result.DllsCopied++;
             }
             catch (Exception ex)
@@ -446,35 +441,41 @@ public class OpenSteamToolInstaller
         return result;
     }
 
-    public static bool IsSteamRunning()
+    public static async Task CloseSteamAsync(string steamDirectory)
     {
         var processes = Process.GetProcessesByName("steam");
+        if (processes.Length == 0)
+            return;
         foreach (var process in processes)
             process.Dispose();
-        return processes.Length > 0;
-    }
 
-    private static bool IsResourceCurrent(System.Reflection.Assembly assembly, string resourceName, string steamDirectory)
-    {
         try
         {
-            var destinationPath = Path.Combine(steamDirectory, resourceName[OpenSteamToolResourcePrefix.Length..]);
-            if (!File.Exists(destinationPath))
-                return false;
-
-            using var bundledStream = assembly.GetManifestResourceStream(resourceName);
-            if (bundledStream is null)
-                return false;
-
-            using var installedStream = File.OpenRead(destinationPath);
-            return CryptographicOperations.FixedTimeEquals(
-                SHA256.HashData(bundledStream),
-                SHA256.HashData(installedStream));
+            using var shutdown = Process.Start(new ProcessStartInfo
+            {
+                FileName = Path.Combine(steamDirectory, "steam.exe"),
+                Arguments = "-shutdown",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            throw new InvalidOperationException($"Steam could not be asked to shut down: {ex.Message}", ex);
         }
+
+        var timeout = DateTime.UtcNow.AddSeconds(25);
+        while (DateTime.UtcNow < timeout)
+        {
+            await Task.Delay(500);
+            var currentProcesses = Process.GetProcessesByName("steam");
+            foreach (var process in currentProcesses)
+                process.Dispose();
+            if (currentProcesses.Length == 0)
+                return;
+        }
+
+        throw new TimeoutException("Steam did not close. Close Steam manually, then retry. SteamVault did not force-quit it.");
     }
 
     public static int EnsureRequiredDirectories(string steamDirectory)
